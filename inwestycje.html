@@ -374,6 +374,12 @@
 
             <!-- ZAKŁADKA: ZESTAWIENIA -->
             <div id="tab-content-zestawienia" class="tab-content">
+                <div style="margin-bottom: 20px; display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
+                    <label for="chart-scope-select" style="font-weight: 600; color: #f8fafc;">Zakres danych:</label>
+                    <select id="chart-scope-select" onchange="renderCharts()" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #475569; background: #1e293b; color: #f8fafc;">
+                        <option value="all">Cała inwestycja</option>
+                    </select>
+                </div>
                 <div class="charts-grid">
                     <div class="chart-box"><canvas id="globalChart"></canvas></div>
                     <div class="chart-box"><canvas id="investChart"></canvas></div>
@@ -566,62 +572,103 @@
     function renderCharts() {
         if (!currentInv || !db.investments[currentInv]) return;
 
-        let dFree = 0, dRes = 0, dSold = 0;
-        let vFree = 0, vRes = 0, vSold = 0;
-
-        let barLabels = [];
-        let barDataSold = [], barDataRes = [], barDataFree = [];
-        let barValSold = [], barValRes = [], barValFree = [];
+        const scopeSelect = document.getElementById('chart-scope-select');
+        const currentScope = scopeSelect.value || 'all';
 
         const buildings = db.investments[currentInv];
         const tbody = document.getElementById('sum-table-body');
         tbody.innerHTML = '';
 
-        Object.keys(buildings).forEach(buildName => {
-            let bSold = 0, bRes = 0, bFree = 0;
-            let bvSold = 0, bvRes = 0, bvFree = 0;
+        // Aktualizacja listy dropdown (tylko raz przy zmianie inwestycji, gdy opcji jest mniej niż budynków)
+        const bNames = Object.keys(buildings);
+        if (scopeSelect.options.length - 1 !== bNames.length) {
+            scopeSelect.innerHTML = '<option value="all">Cała inwestycja</option>';
+            bNames.forEach(b => {
+                scopeSelect.innerHTML += `<option value="${b}">Budynek: ${b}</option>`;
+            });
+            scopeSelect.value = currentScope;
+        }
+
+        // Zmienne do podsumowania globalnego (dla wybranego zakresu)
+        let dFree = 0, dRes = 0, dSold = 0;
+        let vFree = 0, vRes = 0, vSold = 0;
+
+        // Obiekt trzymający podsumowania dla poszczególnych typów w wybranym zakresie
+        let typesAgg = {};
+
+        bNames.forEach(buildName => {
+            // Filtrowanie po zakresie
+            if (currentScope !== 'all' && buildName !== currentScope) return;
+
+            let bFree = 0, bRes = 0, bSold = 0;
+            let bvFree = 0, bvRes = 0, bvSold = 0;
+            
+            // Agregacja dla pojedynczego budynku (dla tabeli)
+            let bTypesAgg = {};
 
             Object.values(buildings[buildName]).forEach(floorData => {
                 (floorData.apartments || []).forEach(apt => {
                     const st = (apt.status || 'wolne').toLowerCase();
                     const price = parseFloat((apt.price || '0').toString().replace(/\s/g, '').replace(',', '.')) || 0;
+                    const type = apt.type ? apt.type.toUpperCase() : 'INNE';
+
+                    if (!typesAgg[type]) typesAgg[type] = { dFree:0, dRes:0, dSold:0, vFree:0, vRes:0, vSold:0 };
+                    if (!bTypesAgg[type]) bTypesAgg[type] = { dFree:0, dRes:0, dSold:0, vFree:0, vRes:0, vSold:0 };
 
                     if (st === 'wolne') {
-                        dFree++; bFree++;
-                        vFree += price; bvFree += price;
+                        dFree++; bFree++; typesAgg[type].dFree++; bTypesAgg[type].dFree++;
+                        vFree += price; bvFree += price; typesAgg[type].vFree += price; bTypesAgg[type].vFree += price;
                     }
                     else if (st === 'zarezerwowane') {
-                        dRes++; bRes++;
-                        vRes += price; bvRes += price;
+                        dRes++; bRes++; typesAgg[type].dRes++; bTypesAgg[type].dRes++;
+                        vRes += price; bvRes += price; typesAgg[type].vRes += price; bTypesAgg[type].vRes += price;
                     }
                     else if (st === 'sprzedane') {
-                        dSold++; bSold++;
-                        vSold += price; bvSold += price;
+                        dSold++; bSold++; typesAgg[type].dSold++; bTypesAgg[type].dSold++;
+                        vSold += price; bvSold += price; typesAgg[type].vSold += price; bTypesAgg[type].vSold += price;
                     }
                 });
             });
 
-            barLabels.push(buildName);
-            barDataSold.push(bSold); barDataRes.push(bRes); barDataFree.push(bFree);
-            barValSold.push(bvSold); barValRes.push(bvRes); barValFree.push(bvFree);
-
-            // Wiersz w tabeli dla budynku
-            tbody.innerHTML += `
-            <tr>
-                <td>${buildName}</td>
-                <td>${bFree}</td>
-                <td>${bRes}</td>
-                <td>${bSold}</td>
-                <td>${bvFree.toLocaleString('pl-PL')}</td>
-                <td>${bvRes.toLocaleString('pl-PL')}</td>
-                <td>${bvSold.toLocaleString('pl-PL')}</td>
-            </tr>`;
+            // Wiersze w tabeli dla danego budynku
+            if (Object.keys(bTypesAgg).length > 0) {
+                tbody.innerHTML += `
+                <tr style="background: #e2e8f0;">
+                    <td colspan="7" style="font-weight: 700; color: #0f172a;">🏢 ${buildName}</td>
+                </tr>`;
+                
+                Object.keys(bTypesAgg).sort().forEach(t => {
+                    let td = bTypesAgg[t];
+                    tbody.innerHTML += `
+                    <tr>
+                        <td style="padding-left: 24px;"><b>${t}</b></td>
+                        <td>${td.dFree}</td>
+                        <td>${td.dRes}</td>
+                        <td>${td.dSold}</td>
+                        <td>${td.vFree.toLocaleString('pl-PL')}</td>
+                        <td>${td.vRes.toLocaleString('pl-PL')}</td>
+                        <td>${td.vSold.toLocaleString('pl-PL')}</td>
+                    </tr>`;
+                });
+                
+                // Suma dla budynku
+                tbody.innerHTML += `
+                <tr style="background: #f8fafc; font-weight: 600;">
+                    <td style="padding-left: 24px;"><i>Suma - ${buildName}</i></td>
+                    <td>${bFree}</td>
+                    <td>${bRes}</td>
+                    <td>${bSold}</td>
+                    <td>${bvFree.toLocaleString('pl-PL')}</td>
+                    <td>${bvRes.toLocaleString('pl-PL')}</td>
+                    <td>${bvSold.toLocaleString('pl-PL')}</td>
+                </tr>`;
+            }
         });
 
-        // Wiersz podsumowania (Razem)
+        // Wiersz podsumowania globalnego (Razem dla zakresu)
         tbody.innerHTML += `
-        <tr class="sum-total">
-            <td>RAZEM</td>
+        <tr class="sum-total" style="background: #cbd5e1; color: #0f172a;">
+            <td>RAZEM (${currentScope === 'all' ? 'Cała inwestycja' : currentScope})</td>
             <td>${dFree}</td>
             <td>${dRes}</td>
             <td>${dSold}</td>
@@ -630,26 +677,49 @@
             <td>${vSold.toLocaleString('pl-PL')}</td>
         </tr>`;
 
-        // Tooltip Callback dla waluty
-        const tooltipCallback = {
+        // Zbieranie danych do wykresu słupkowego (Oś X = Typy)
+        let barLabels = Object.keys(typesAgg).sort();
+        let barDataSold = [], barDataRes = [], barDataFree = [];
+        let barValSold = [], barValRes = [], barValFree = [];
+
+        barLabels.forEach(t => {
+            barDataSold.push(typesAgg[t].dSold); barValSold.push(typesAgg[t].vSold);
+            barDataRes.push(typesAgg[t].dRes); barValRes.push(typesAgg[t].vRes);
+            barDataFree.push(typesAgg[t].dFree); barValFree.push(typesAgg[t].vFree);
+        });
+
+        const barTooltipCallback = {
             label: function(context) {
                 let label = context.dataset.label || '';
-                let value = context.parsed;
-                let money = 0;
-                if (context.dataset.dataValues) {
-                    money = context.dataset.dataValues[context.dataIndex] || 0;
-                } else if (context.datasetIndex !== undefined) {
-                    // Dla doughnut chart (jeden dataset)
-                    if (context.dataIndex === 0) money = vFree;
-                    if (context.dataIndex === 1) money = vRes;
-                    if (context.dataIndex === 2) money = vSold;
-                }
-                if (label) label += ': ';
-                return `${label}${value} szt. (${money.toLocaleString('pl-PL')} PLN)`;
+                let value = context.parsed.y || context.parsed;
+                let money = context.dataset.dataValues ? (context.dataset.dataValues[context.dataIndex] || 0) : 0;
+                return `${label}: ${value} szt. (${money.toLocaleString('pl-PL')} PLN)`;
             }
         };
 
-        // 1. Doughnut Chart (Ogółem w inwestycji)
+        const doughnutTooltipCallback = {
+            label: function(context) {
+                let idx = context.dataIndex; 
+                let statusKey = idx === 0 ? 'Free' : (idx === 1 ? 'Res' : 'Sold');
+                let totalCount = context.parsed;
+                let totalMoney = idx === 0 ? vFree : (idx === 1 ? vRes : vSold);
+                
+                let lines = [`${context.label}: ${totalCount} szt. (${totalMoney.toLocaleString('pl-PL')} PLN)`];
+                
+                // Doklejamy rozbicie na typy, jeśli wartość jest większa niż 0
+                barLabels.forEach(t => {
+                    let count = typesAgg[t]['d' + statusKey];
+                    let val = typesAgg[t]['v' + statusKey];
+                    if (count > 0) {
+                        lines.push(`  • ${t}: ${count} szt. (${val.toLocaleString('pl-PL')} PLN)`);
+                    }
+                });
+                
+                return lines;
+            }
+        };
+
+        // 1. Doughnut Chart (Status ogółem w wybranym zakresie)
         if (globalChartInstance) globalChartInstance.destroy();
         const ctxGlobal = document.getElementById('globalChart').getContext('2d');
         globalChartInstance = new Chart(ctxGlobal, {
@@ -667,13 +737,13 @@
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { position: 'bottom', labels: { color: '#e2e8f0', padding: 20 } },
-                    title: { display: true, text: `Status ogółem: ${currentInv}`, color: '#f8fafc', font: { size: 14 } },
-                    tooltip: { callbacks: tooltipCallback }
+                    title: { display: true, text: `Status ogółem: ${currentScope === 'all' ? currentInv : currentScope}`, color: '#f8fafc', font: { size: 14 } },
+                    tooltip: { callbacks: doughnutTooltipCallback }
                 }
             }
         });
 
-        // 2. Bar Chart (Rozbicie na budynki)
+        // 2. Bar Chart (Rozbicie na Typy)
         if (investChartInstance) investChartInstance.destroy();
         const ctxInvest = document.getElementById('investChart').getContext('2d');
         
@@ -698,8 +768,8 @@
                 },
                 plugins: {
                     legend: { position: 'bottom', labels: { color: '#e2e8f0' } },
-                    title: { display: true, text: 'Status w budynkach', color: '#f8fafc', font: { size: 14 } },
-                    tooltip: { callbacks: tooltipCallback }
+                    title: { display: true, text: `Rozbicie wg typu: ${currentScope === 'all' ? currentInv : currentScope}`, color: '#f8fafc', font: { size: 14 } },
+                    tooltip: { callbacks: barTooltipCallback }
                 }
             }
         });
