@@ -145,53 +145,24 @@ body {
   background: #dee2e6;
   border-right: 1px solid #ccc;
   position: relative;
-  transition: flex 0.3s ease, min-width 0.3s ease, max-width 0.3s ease;
   min-width: 0;
   overflow: hidden;
 }
 
-#canvas-column.collapsed {
-  flex: 0 0 0px;
-  min-width: 0;
-  max-width: 0;
-  border-right: none;
+#resizer {
+  width: 8px;
+  cursor: col-resize;
+  background: #cbd5e1;
+  z-index: 100;
+  transition: background 0.2s;
+  flex-shrink: 0;
 }
 
-/* --- PRZYCISK ZWIJANIA RZUTU --- */
-#toggle-canvas-btn {
-  position: absolute;
-  top: 12px;               /* przycisk u góry */
-  z-index: 200;
-  width: 20px;
-  height: 56px;
-  background: #343a40;
-  border: none;
-  border-radius: 0 8px 8px 0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 13px;
-  box-shadow: 2px 0 8px rgba(0,0,0,0.25);
-  transition: background 0.2s, left 0.3s ease;
-  padding: 0;
-  line-height: 1;
-}
-
-#toggle-canvas-btn:hover {
+#resizer:hover, #resizer.active {
   background: #007bff;
 }
 
-#toggle-canvas-btn .toggle-arrow {
-  display: inline-block;
-  /* strzałka obraca się z opóźnieniem — dopiero po przesunięciu przycisku */
-  transition: transform 0.25s ease 0.3s;
-}
 
-#toggle-canvas-btn.collapsed .toggle-arrow {
-  transform: rotate(180deg);
-}
 
 .view-controls {
   background: #e9ecef;
@@ -266,18 +237,12 @@ body {
 }
 
 #table-panel {
-  width: 950px;
+  flex: 1;
   min-width: 320px;
   background: white;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-}
-
-/* Na szerokich ekranach tabela może rosnąć gdy rzut zwinięty */
-#main-view.canvas-collapsed #table-panel {
-  width: auto;
-  flex: 1;
 }
 
 .table-controls {

@@ -103,10 +103,8 @@
         </div>
       </div>
 
-      <!-- PRZYCISK ZWIJANIA RZUTU -->
-      <button id="toggle-canvas-btn" onclick="toggleCanvasPanel()" title="Zwiń / rozwiń rzut">
-        <span class="toggle-arrow">◄</span>
-      </button>
+      <!-- DRAG RESIZER -->
+      <div id="resizer"></div>
 
       <div id="table-panel">
         <div class="table-controls">
@@ -458,70 +456,46 @@
     <script src="js/developer.js"></script>
     <script>
       // ============================================================
-      // TOGGLE RZUTU (zwijanie / rozwijanie panelu rzutu)
+      // DRAGGABLE RESIZER
       // ============================================================
       (function () {
-        const isMobile = () => window.innerWidth <= 768;
+        const resizer = document.getElementById("resizer");
+        const leftPanel = document.getElementById("canvas-column");
+        const rightPanel = document.getElementById("table-panel");
+        let isResizing = false;
 
-        // Stan: na telefonie domyślnie zwinięty, na desktopie rozwinięty
-        let canvasVisible = !isMobile();
-
-        function positionToggleBtn() {
-          const btn = document.getElementById('toggle-canvas-btn');
-          const col = document.getElementById('canvas-column');
-          const mainView = document.getElementById('main-view');
-          if (!btn || !col) return;
-
-          const colWidth = col.getBoundingClientRect().width;
-          const mainLeft = mainView.getBoundingClientRect().left;
-          const colLeft  = col.getBoundingClientRect().left;
-          const relativeLeft = colLeft - mainLeft + colWidth;
-
-          // Przycisk siedzi na prawej krawędzi canvas-column
-          // Gdy col szerokość = 0, przycisk jest przy lewej krawędzi main-view
-          btn.style.left = Math.max(0, relativeLeft - 10) + 'px';
-        }
-
-        function applyState(animated) {
-          const col      = document.getElementById('canvas-column');
-          const btn      = document.getElementById('toggle-canvas-btn');
-          const mainView = document.getElementById('main-view');
-          if (!col || !btn) return;
-
-          if (canvasVisible) {
-            col.classList.remove('collapsed');
-            if (isMobile()) col.classList.add('expanded');
-            btn.classList.remove('collapsed');
-            mainView.classList.remove('canvas-collapsed');
-          } else {
-            col.classList.add('collapsed');
-            if (isMobile()) col.classList.remove('expanded');
-            btn.classList.add('collapsed');
-            mainView.classList.add('canvas-collapsed');
-          }
-
-          // Po animacji uaktualnij pozycję przycisku
-          setTimeout(positionToggleBtn, animated ? 310 : 0);
-        }
-
-        window.toggleCanvasPanel = function () {
-          canvasVisible = !canvasVisible;
-          applyState(true);
-        };
-
-        // Inicjalizacja po załadowaniu strony
-        window.addEventListener('DOMContentLoaded', function () {
-          applyState(false);
+        resizer.addEventListener("mousedown", (e) => {
+          isResizing = true;
+          document.body.style.cursor = "col-resize";
+          resizer.classList.add("active");
+          // Zapobiegamy zaznaczaniu tekstu/elementów podczas przeciągania
+          document.body.style.userSelect = "none";
         });
 
-        // Reaguj na zmianę rozmiaru okna (np. obrót telefonu)
-        window.addEventListener('resize', function () {
-          const shouldBeVisible = !isMobile();
-          if (shouldBeVisible !== canvasVisible) {
-            canvasVisible = shouldBeVisible;
-            applyState(false);
-          } else {
-            positionToggleBtn();
+        document.addEventListener("mousemove", (e) => {
+          if (!isResizing) return;
+          // Pobieramy pozycję myszy jako nową szerokość lewego panelu
+          let newWidth = e.clientX;
+          
+          // Ograniczenia szerokości
+          const minWidth = 300;
+          const maxWidth = window.innerWidth - 400; // minimum 400px dla prawej strony
+          
+          if (newWidth < minWidth) newWidth = minWidth;
+          if (newWidth > maxWidth) newWidth = maxWidth;
+
+          leftPanel.style.flex = "none";
+          leftPanel.style.width = newWidth + "px";
+          rightPanel.style.flex = "1";
+          rightPanel.style.width = "auto";
+        });
+
+        document.addEventListener("mouseup", () => {
+          if (isResizing) {
+            isResizing = false;
+            document.body.style.cursor = "";
+            resizer.classList.remove("active");
+            document.body.style.userSelect = "";
           }
         });
       })();
