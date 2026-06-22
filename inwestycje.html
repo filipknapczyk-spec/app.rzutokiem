@@ -633,8 +633,8 @@
             // Wiersze w tabeli dla danego budynku
             if (Object.keys(bTypesAgg).length > 0) {
                 tbody.innerHTML += `
-                <tr style="background: #e2e8f0;">
-                    <td colspan="7" style="font-weight: 700; color: #0f172a;">🏢 ${buildName}</td>
+                <tr style="background: rgba(255,255,255,0.1);">
+                    <td colspan="7" style="font-weight: 700; color: #f8fafc;">🏢 ${buildName}</td>
                 </tr>`;
                 
                 Object.keys(bTypesAgg).sort().forEach(t => {
@@ -653,7 +653,7 @@
                 
                 // Suma dla budynku
                 tbody.innerHTML += `
-                <tr style="background: #f8fafc; font-weight: 600;">
+                <tr style="background: rgba(255,255,255,0.02); font-weight: 600; color: #cbd5e1;">
                     <td style="padding-left: 24px;"><i>Suma - ${buildName}</i></td>
                     <td>${bFree}</td>
                     <td>${bRes}</td>
@@ -667,7 +667,7 @@
 
         // Wiersz podsumowania globalnego (Razem dla zakresu)
         tbody.innerHTML += `
-        <tr class="sum-total" style="background: #cbd5e1; color: #0f172a;">
+        <tr class="sum-total" style="background: rgba(255,255,255,0.15); color: #f8fafc; font-weight: 700;">
             <td>RAZEM (${currentScope === 'all' ? 'Cała inwestycja' : currentScope})</td>
             <td>${dFree}</td>
             <td>${dRes}</td>
