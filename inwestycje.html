@@ -303,8 +303,8 @@
             </div>
 
             <div class="tabs-header">
-                <button class="tab-btn active" onclick="switchTab('dane')" id="tab-btn-dane">Dane</button>
-                <button class="tab-btn" onclick="switchTab('zestawienia')" id="tab-btn-zestawienia">Zestawienia</button>
+                <button class="tab-btn active" onclick="switchTab('zestawienia')" id="tab-btn-zestawienia">Zestawienia</button>
+                <button class="tab-btn" onclick="switchTab('dane')" id="tab-btn-dane">Dane</button>
             </div>
 
             <!-- ZAKŁADKA: DANE -->
@@ -549,8 +549,8 @@
         document.getElementById('detail-view').classList.add('visible');
         document.getElementById('detail-alert').style.display = 'none';
         
-        // Zawsze powracaj do zakładki DANE przy zmianie inwestycji
-        switchTab('dane');
+        // Zawsze powracaj do zakładki ZESTAWIENIA przy zmianie inwestycji
+        switchTab('zestawienia');
     }
 
     function switchTab(tabId) {
