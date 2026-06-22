@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harmonogram — Architektura dialogu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #0f1117; color: #f1f5f9; min-height: 100vh; padding-top: 64px; }
+        .bg-glow {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background: radial-gradient(ellipse 60% 50% at 90% 90%, rgba(20,184,166,0.08) 0%, transparent 70%);
+        }
+        /* GLOBAL HEADER */
+        .header {
+            height: 64px; position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 40px; border-bottom: 1px solid rgba(255,255,255,0.06);
+            background: rgba(15,17,23,0.85); backdrop-filter: blur(12px);
+            color: white; font-family: 'Inter', sans-serif;
+        }
+        .header-brand { display: flex; align-items: center; gap: 12px; color: inherit; cursor: default; }
+        .header-icon { width: 32px; height: 32px; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .header-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .header-title { font-size: 16px; font-weight: 700; }
+        
+        .header-nav { display: flex; gap: 8px; background: rgba(255,255,255,0.04); padding: 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); }
+        .nav-item { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; text-decoration: none; font-size: 14px; transition: all 0.2s; color: white; }
+        .nav-item:hover { background: rgba(255,255,255,0.08); }
+        .nav-item.active { background: rgba(255,255,255,0.1); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        
+        .btn-header-back {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 14px; background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+            color: #cbd5e1; font-size: 13px; font-weight: 500; text-decoration: none;
+            transition: all 0.2s; margin-right: 12px;
+        }
+        .btn-header-back:hover { background: rgba(255,255,255,0.12); color: white; border-color: rgba(255,255,255,0.2); }
+
+        .header-user { display: flex; align-items: center; gap: 12px; }
+        .user-avatar { width: 32px; height: 32px; background: linear-gradient(135deg, #6366f1, #a855f7); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+        .main { position: relative; z-index: 1; max-width: 1000px; margin: 40px auto; padding: 0 32px 60px; }
+        .card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px; padding: 28px; margin-bottom: 28px;
+        }
+        .card-title {
+            font-size: 13px; font-weight: 700; color: #94a3b8;
+            text-transform: uppercase; letter-spacing: 0.8px;
+            margin-bottom: 20px; padding-bottom: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .task-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; align-items: flex-end; margin-bottom: 20px; }
+        .field-group { display: flex; flex-direction: column; gap: 6px; }
+        .field-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; }
+        .field-input {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px; color: #f1f5f9; padding: 10px; font-size: 13px; outline: none;
+        }
+        .btn-add {
+            background: linear-gradient(135deg, #14b8a6, #0f766e);
+            color: white; border: none; border-radius: 8px;
+            padding: 11px 16px; font-size: 13px; font-weight: 700; cursor: pointer;
+        }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; padding: 12px; font-size: 11px; color: #64748b; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        td { padding: 14px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 13px; }
+        .progress-bar { height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; width: 100%; margin-top: 6px; overflow: hidden; }
+        .progress-fill { height: 100%; background: #14b8a6; border-radius: 10px; }
+    </style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<header class="header">
+    <div class="header-brand">
+        <div class="header-icon"><img src="logo.png" alt="Logo"></div>
+        <div class="header-title">Architektura dialogu</div>
+    </div>
+    <div style="display: flex; align-items: center;">
+        <a href="/dashboard.html" class="btn-header-back">← Powrót</a>
+        <nav class="header-nav" id="header-nav">
+            <!-- Ikony renderowane przez JS -->
+        </nav>
+    </div>
+    <div class="header-user">
+        <div class="user-avatar" id="user-avatar">?</div>
+    </div>
+</header>
+<main class="main">
+    <div class="card">
+        <div class="card-title">Dodaj etap / zadanie</div>
+        <div class="task-grid">
+            <div class="field-group">
+                <label class="field-label">Nazwa zadania</label>
+                <input type="text" id="t-name" class="field-input" placeholder="np. Stan surowy otwarty">
+            </div>
+            <div class="field-group">
+                <label class="field-label">Od</label>
+                <input type="date" id="t-start" class="field-input">
+            </div>
+            <div class="field-group">
+                <label class="field-label">Do</label>
+                <input type="date" id="t-end" class="field-input">
+            </div>
+            <div class="field-group">
+                <label class="field-label">Osoba / Firma</label>
+                <input type="text" id="t-who" class="field-input" placeholder="Kto?">
+            </div>
+            <button class="btn-add" onclick="addTask()">DODAJ</button>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-title">Planowane etapy inwestycji</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:30%">Zadanie</th>
+                    <th>Termin</th>
+                    <th>Wykonawca</th>
+                    <th>Postęp</th>
+                    <th>Akcje</th>
+                </tr>
+            </thead>
+            <tbody id="task-list">
+                <tr>
+                    <td><strong>Fundamenty i izolacje</strong></td>
+                    <td>2024-06-01 &ndash; 2024-06-20</td>
+                    <td>Betonex Sp. z o.o.</td>
+                    <td>
+                        <div style="font-size: 11px;">100%</div>
+                        <div class="progress-bar"><div class="progress-fill" style="width: 100%"></div></div>
+                    </td>
+                    <td><button style="background:none; border:none; color:#f87171; cursor:pointer;" onclick="this.closest('tr').remove()">Usuń</button></td>
+                </tr>
+                <tr>
+                    <td><strong>Ściany konstrukcyjne parteru</strong></td>
+                    <td>2024-06-21 &ndash; 2024-07-10</td>
+                    <td>BudujZNami</td>
+                    <td>
+                        <div style="font-size: 11px;">25%</div>
+                        <div class="progress-bar"><div class="progress-fill" style="width: 25%"></div></div>
+                    </td>
+                    <td><button style="background:none; border:none; color:#f87171; cursor:pointer;" onclick="this.closest('tr').remove()">Usuń</button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+<script>
+    function addTask() {
+        const name = document.getElementById('t-name').value;
+        const start = document.getElementById('t-start').value;
+        const end = document.getElementById('t-end').value;
+        const who = document.getElementById('t-who').value;
+        if(!name || !start || !end) return alert("Uzupełnij daty i nazwę!");
+        
+        const tbody = document.getElementById('task-list');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${name}</strong></td>
+            <td>${start} &ndash; ${end}</td>
+            <td>${who}</td>
+            <td>
+                <div style="font-size: 11px;">0%</div>
+                <div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div>
+            </td>
+            <td><button style="background:none; border:none; color:#f87171; cursor:pointer;" onclick="this.closest('tr').remove()">Usuń</button></td>
+        `;
+        tbody.prepend(tr);
+        document.getElementById('t-name').value = '';
+    }
+    async function initHeader() {
+        try {
+            const res = await fetch('/api/me');
+            if (!res.ok) return;
+            const me = await res.json();
+            document.getElementById('user-avatar').textContent = (me.name || me.email || '?')[0].toUpperCase();
+            const nav = document.getElementById('header-nav');
+            const tiles = [
+                { id: 'sales', href: '/developer.html', icon: '📈', name: 'Panel Sprzedaży', perm: 'sales' },
+                { id: 'admin', href: '/admin.html', icon: '✏️', name: 'Edytor sprzedaży', perm: 'admin' },
+                { id: 'projekt', href: '/projekt.html', icon: '📁', name: 'Projekt', perm: 'projekt' },
+                { id: 'kontakty', href: '/kontakty.html', icon: '📇', name: 'Baza kontaktów', perm: 'kontakty' },
+                { id: 'usterki', href: '/usterki.html', icon: '⚠️', name: 'Panel Usterek', perm: 'usterki' },
+                { id: 'harmonogram', href: '/harmonogram.html', icon: '📅', name: 'Harmonogram', perm: 'harmonogram' },
+                { id: 'company', href: '/company-admin.html', icon: '🏢', name: 'Zarządzanie Firmą', perm: 'company' },
+                { id: 'superadmin', href: '/superadmin.html', icon: '🔑', name: 'Panel SuperAdmina', perm: 'superadmin' }
+            ];
+            const currentPath = window.location.pathname;
+                        const companyApps = me.companyApps || ['sales', 'admin', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company'];
+            nav.innerHTML = tiles.filter(t => {
+                if (t.id === 'superadmin') return me.role === 'superadmin';
+                if (me.role === 'companyAdmin') return true;
+                if (t.id === 'company') return me.role === 'superadmin';
+                if (me.role === 'superadmin') return true;
+                return (me.permissions || []).includes(t.perm);
+            }).map(t => {
+                const companyHasApp = (me.role === 'superadmin') || companyApps.includes(t.perm);
+                if (!companyHasApp && me.role !== 'superadmin') {
+                    return `<a href="#" class="nav-item" style="opacity: 0.3; cursor: not-allowed;" title="${t.name} (Niedostępne dla firmy)" onclick="event.preventDefault();">${t.icon}</a>`;
+                }
+                return `<a href="${t.href}" class="nav-item ${currentPath.includes(t.href) ? 'active' : ''}" title="${t.name}">${t.icon}</a>`;
+            }).join('');
+        } catch (e) { console.error(e); }
+    }
+    initHeader();
+</script>
+</body>
+</html>

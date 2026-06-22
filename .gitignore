@@ -1,0 +1,51 @@
+# ===== DANE UŻYTKOWNIKÓW (NIGDY nie trafiają na GitHub) =====
+data/
+uploads/
+
+# ===== SEKRETY I KONFIGURACJA ŚRODOWISKOWA =====
+.env
+config.json
+companies.json
+users.json
+
+# ===== NODE.JS =====
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===== PLIKI TYMCZASOWE I BACKUP =====
+*.bak
+*.tmp
+*.log
+
+# ===== PLIKI DEWELOPERSKIE (skrypty pomocnicze, nie potrzebne na serwerze) =====
+scratch/
+diff_extract.txt
+recovered_block.txt
+add_*.js
+analyze_*.js
+apply_*.js
+check_*.js
+clean_*.js
+debug_*.js
+diagnose*.js
+final_*.js
+fix_*.js
+migrate_*.js
+patch_*.js
+reconstruct_*.js
+recover*.js
+refactor_*.js
+restore_*.js
+test_bug.js
+test_jsdom*.js
+test_render.js
+update_headers.js
+verify*.js
+
+# ===== BACKUP HTML (pliki pomocnicze, nie produkcyjne) =====
+*_backup*.html
+*_backup_*.html
+developer_backup_refactor.html
+admin_backup.html

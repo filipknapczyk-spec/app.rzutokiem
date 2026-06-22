@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperAdmin — Architektura dialogu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #0f1117; color: #f1f5f9; min-height: 100vh; padding-top: 64px; }
+
+        .bg-glow {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background: radial-gradient(ellipse 60% 50% at 15% 25%, rgba(245,158,11,0.08) 0%, transparent 70%);
+        }
+
+        /* GLOBAL HEADER */
+        .header {
+            height: 64px; position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 40px; border-bottom: 1px solid rgba(255,255,255,0.06);
+            background: rgba(15,17,23,0.85); backdrop-filter: blur(12px);
+            color: white; font-family: 'Inter', sans-serif;
+        }
+        .header-brand { display: flex; align-items: center; gap: 12px; color: inherit; cursor: default; }
+        .header-icon { width: 32px; height: 32px; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .header-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .header-title { font-size: 16px; font-weight: 700; }
+        
+        .header-nav { display: flex; gap: 8px; background: rgba(255,255,255,0.04); padding: 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); }
+        .nav-item { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; text-decoration: none; font-size: 14px; transition: all 0.2s; color: white; }
+        .nav-item:hover { background: rgba(255,255,255,0.08); }
+        .nav-item.active { background: rgba(255,255,255,0.1); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        
+        .btn-header-back {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 14px; background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+            color: #cbd5e1; font-size: 13px; font-weight: 500; text-decoration: none;
+            transition: all 0.2s; margin-right: 12px;
+        }
+        .btn-header-back:hover { background: rgba(255,255,255,0.12); color: white; border-color: rgba(255,255,255,0.2); }
+
+        .header-user { display: flex; align-items: center; gap: 12px; }
+        .user-avatar { width: 32px; height: 32px; background: linear-gradient(135deg, #6366f1, #a855f7); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+
+        .main { position: relative; z-index: 1; max-width: 900px; margin: 40px auto; padding: 0 32px 60px; }
+
+        .card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px; padding: 28px;
+            margin-bottom: 28px;
+        }
+        .card-title {
+            font-size: 13px; font-weight: 700; color: #94a3b8;
+            text-transform: uppercase; letter-spacing: 0.8px;
+            margin-bottom: 20px; padding-bottom: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+        @media(max-width:680px) { .form-grid { grid-template-columns: 1fr; } }
+
+        .field-label { display: block; font-size: 11px; font-weight: 600; color: #64748b; letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 6px; }
+        .field-input {
+            width: 100%; padding: 10px 12px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px; color: #f1f5f9; font-size: 13px; font-family: inherit;
+            outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .field-input::placeholder { color: #334155; }
+        .field-input:focus { border-color: rgba(245,158,11,0.5); box-shadow: 0 0 0 3px rgba(245,158,11,0.1); }
+        .field-input option { background-color: #1e293b; color: #f1f5f9; }
+
+        .btn-add {
+            padding: 10px 22px;
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            color: white; border: none; border-radius: 8px;
+            font-size: 13px; font-weight: 700; font-family: inherit;
+            cursor: pointer; transition: opacity 0.2s, transform 0.15s;
+        }
+        .btn-add:hover { opacity: 0.88; transform: translateY(-1px); }
+
+        .change-pass-grid { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+        .change-pass-grid .field-group { flex: 1; min-width: 160px; }
+        .btn-change {
+            padding: 10px 18px; background: rgba(99,102,241,0.15);
+            border: 1px solid rgba(99,102,241,0.3); color: #a5b4fc;
+            border-radius: 8px; font-size: 13px; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: all 0.2s; white-space: nowrap;
+        }
+        .btn-change:hover { background: rgba(99,102,241,0.25); }
+
+        /* TABLE */
+        .table-wrap { overflow-x: auto; margin-top: 4px; }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left; padding: 10px 14px;
+            font-size: 11px; font-weight: 600; color: #64748b;
+            text-transform: uppercase; letter-spacing: 0.6px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        td { padding: 14px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 13px; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+
+        .badge-id { font-size: 10px; color: #475569; font-family: monospace; }
+        .btn-del {
+            padding: 5px 12px; background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.2); color: #f87171;
+            border-radius: 6px; font-size: 11px; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-del:hover { background: rgba(239,68,68,0.25); }
+
+        .btn-edit {
+            padding: 5px 14px; background: rgba(99,102,241,0.12);
+            border: 1px solid rgba(99,102,241,0.3); color: #a5b4fc;
+            border-radius: 6px; font-size: 11px; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-edit:hover { background: rgba(99,102,241,0.25); border-color: rgba(99,102,241,0.5); }
+
+        .limit-cell { display: flex; align-items: center; gap: 6px; }
+        .limit-input {
+            width: 56px; padding: 5px 8px; text-align: center;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px; color: #f1f5f9; font-size: 13px; font-family: inherit;
+            outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .limit-input:focus { border-color: rgba(59,130,246,0.5); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        .limit-input.changed { border-color: rgba(245,158,11,0.6); box-shadow: 0 0 0 3px rgba(245,158,11,0.1); }
+        .btn-save-limit {
+            display: none; padding: 4px 10px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white; border: none; border-radius: 6px;
+            font-size: 11px; font-weight: 700; font-family: inherit;
+            cursor: pointer; transition: opacity 0.2s; white-space: nowrap;
+        }
+        .btn-save-limit:hover { opacity: 0.85; }
+        .btn-save-limit.visible { display: inline-block; }
+        .inv-count { font-size: 11px; color: #64748b; white-space: nowrap; }
+        .inv-count.at-limit { color: #f87171; }
+
+        .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 12px; display: none; }
+        .alert-ok { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); color: #6ee7b7; }
+        .alert-err { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: #fca5a5; }
+
+        .empty-state { text-align: center; padding: 40px 20px; color: #475569; font-size: 14px; }
+
+        /* MODAL */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px); display: none; z-index: 2000;
+            align-items: center; justify-content: center;
+        }
+        .modal {
+            background: #1e293b; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px; padding: 24px; width: 400px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        .modal-title { font-size: 15px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+        .btn-cancel { padding: 8px 16px; background: rgba(255,255,255,0.05); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .btn-cancel:hover { background: rgba(255,255,255,0.1); color: white; }
+        .btn-save { padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-save:hover { background: #2563eb; }
+    </style>
+</head>
+<body>
+<div class="bg-glow"></div>
+
+<header class="header">
+    <div class="header-brand">
+        <div class="header-icon"><img src="logo.png" alt="Logo"></div>
+        <div class="header-title">Architektura dialogu</div>
+    </div>
+    <div style="display: flex; align-items: center;">
+        <a href="/dashboard.html" class="btn-header-back">← Powrót</a>
+        <nav class="header-nav" id="header-nav">
+            <!-- Ikony renderowane przez JS -->
+        </nav>
+    </div>
+    <div class="header-user">
+        <div class="user-avatar" id="user-avatar">?</div>
+    </div>
+</header>
+
+<main class="main">
+
+    <!-- ZMIANA HASŁA -->
+    <div class="card">
+        <div class="card-title">🔒 Bezpieczeństwo konta SuperAdmina</div>
+        <div class="change-pass-grid">
+            <div class="field-group">
+                <label class="field-label">Nowe hasło</label>
+                <input type="password" id="new-admin-pass" class="field-input" placeholder="Wpisz nowe hasło">
+            </div>
+            <div class="field-group">
+                <label class="field-label">Powtórz hasło</label>
+                <input type="password" id="confirm-admin-pass" class="field-input" placeholder="Wpisz ponownie">
+            </div>
+            <button class="btn-change" onclick="changeAdminPassword()">Zaktualizuj hasło</button>
+        </div>
+        <div id="pass-alert" class="alert"></div>
+    </div>
+
+    <!-- DODAJ FIRMĘ -->
+    <div class="card">
+        <div class="card-title">🏢 Dodaj nową firmę</div>
+        <div class="form-grid">
+            <div>
+                <label class="field-label">Nazwa firmy</label>
+                <input type="text" id="comp-name" class="field-input" placeholder="np. InBud Sp. z o.o.">
+            </div>
+            <div>
+                <label class="field-label">E-mail administratora</label>
+                <input type="email" id="comp-email" class="field-input" placeholder="admin@firma.pl">
+            </div>
+            <div>
+                <label class="field-label">Hasło administratora</label>
+                <input type="text" id="comp-pass" class="field-input" placeholder="Hasło startowe">
+            </div>
+        </div>
+        <button class="btn-add" onclick="addCompany()">+ UTWÓRZ FIRMĘ</button>
+        <div id="add-alert" class="alert"></div>
+    </div>
+
+    <!-- LISTA FIRM -->
+    <div class="card">
+        <div class="card-title">📋 Zarejestrowane firmy</div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nazwa firmy</th>
+                        <th>E-mail admina</th>
+                        <th>Max inwestycji</th>
+                        <th>Aplikacje</th>
+                        <th>Akcje</th>
+                    </tr>
+                </thead>
+                <tbody id="comp-list">
+                    <tr><td colspan="4" class="empty-state">Ładowanie...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- BACKUPY -->
+    <div class="card">
+        <div class="card-title">💾 Zarządzanie Kopiami Zapasowymi</div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Firma</th>
+                        <th>Dostępne kopie zapasowe</th>
+                        <th>Akcje</th>
+                    </tr>
+                </thead>
+                <tbody id="backup-list">
+                    <tr><td colspan="3" class="empty-state">Ładowanie...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<div id="reset-modal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-title">🔑 Zresetuj hasło firmy: <span id="reset-comp-name" style="color:#60a5fa"></span></div>
+        <div style="margin-bottom: 12px;">
+            <label class="field-label">Nowe hasło</label>
+            <input type="password" id="reset-pass1" class="field-input" placeholder="Wpisz nowe hasło">
+        </div>
+        <div>
+            <label class="field-label">Powtórz hasło</label>
+            <input type="password" id="reset-pass2" class="field-input" placeholder="Wpisz ponownie">
+        </div>
+        <div id="reset-alert" class="alert" style="margin-top: 10px;"></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeResetModal()">Anuluj</button>
+            <button class="btn-save" onclick="saveNewPassword()">Zapisz</button>
+        </div>
+    </div>
+</div>
+
+<div id="backup-loading-overlay" class="modal-overlay" style="flex-direction: column;">
+    <div style="width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.1); border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;"></div>
+    <div style="color: white; font-size: 16px; font-weight: 600; text-align: center;">Trwa zabezpieczanie aktualnych danych<br>i przywracanie kopii...<br><span style="font-size:13px; font-weight:400; color:#94a3b8; margin-top:8px; display:block;">Proszę czekać, to potrwa krótką chwilę.</span></div>
+    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+</div>
+
+<!-- MODAL PRZYWRACANIA -->
+<div id="restore-modal" class="modal-overlay">
+    <div class="modal" style="width: 450px;">
+        <div class="modal-title">⚠️ Potwierdzenie przywrócenia kopii</div>
+        <div style="margin-bottom: 16px; font-size: 14px; color: #cbd5e1; line-height: 1.6;">
+            Zamierzasz przywrócić dane firmy <strong id="restore-comp-name" style="color: white;"></strong> z dnia:<br>
+            <strong id="restore-backup-date" style="color: #60a5fa;"></strong>
+            <br><br>
+            Czy chcesz przed przywróceniem utworzyć <strong>kopię zapasową aktualnych danych</strong>?
+        </div>
+        <div class="modal-actions" style="justify-content: space-between; margin-top: 24px;">
+            <button class="btn-cancel" onclick="closeRestoreModal()">Anuluj</button>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-cancel" style="color: #fca5a5; border-color: rgba(239,68,68,0.3);" onclick="confirmRestore(false)">Nie</button>
+                <button class="btn-save" onclick="confirmRestore(true)">Tak</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EDYCJI FIRMY -->
+<div id="edit-modal" class="modal-overlay">
+    <div class="modal" style="width:480px; max-width:95vw;">
+        <div class="modal-title">&#9998; Edytuj firmę: <span id="edit-comp-name" style="color:#60a5fa"></span></div>
+
+        <div id="edit-alert" class="alert" style="margin-bottom:14px;"></div>
+
+        <!-- Dane firmy -->
+        <div style="margin-bottom:12px;">
+            <label class="field-label">Nazwa firmy</label>
+            <input type="text" id="edit-name" class="field-input" placeholder="Nazwa firmy">
+        </div>
+        <div style="margin-bottom:20px;">
+            <label class="field-label">E-mail / login administratora</label>
+            <input type="email" id="edit-email" class="field-input" placeholder="admin@firma.pl">
+        </div>
+
+        <!-- Reset hasła -->
+        <div style="border-top:1px solid rgba(255,255,255,0.07); padding-top:16px; margin-bottom:16px;">
+            <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.6px; margin-bottom:12px;">Reset hasła</div>
+            <div style="margin-bottom:10px;">
+                <label class="field-label">Nowe hasło</label>
+                <input type="password" id="edit-pass1" class="field-input" placeholder="Zostaw puste, jeśli nie zmieniasz">
+            </div>
+            <div>
+                <label class="field-label">Powtórz nowe hasło</label>
+                <input type="password" id="edit-pass2" class="field-input" placeholder="Powtórz hasło">
+            </div>
+        </div>
+
+        <!-- Usuń firmę -->
+        <div style="border-top:1px solid rgba(239,68,68,0.15); padding-top:14px; margin-bottom:4px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="font-size:12px; color:#64748b;">Nieodwracalne usunięcie firmy</span>
+            <button class="btn-del" id="edit-del-btn" onclick="deleteFromModal()">&#128465; Usuń firmę</button>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeEditModal()">Anuluj</button>
+            <button class="btn-save" onclick="saveEdit()">Zapisz zmiany</button>
+        </div>
+    </div>
+</div>
+
+<div id="apps-modal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-title">📦 Aplikacje firmy: <span id="apps-comp-name" style="color:#60a5fa"></span></div>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+            <label style="display:flex; gap:8px; align-items:center; cursor:pointer;">
+                <input type="checkbox" id="app-sales" value="sales" style="width:16px; height:16px; accent-color:#3b82f6;">
+                <span style="font-size:13px; color:#cbd5e1;">📈 Panel Sprzedaży</span>
+            </label>
+            <label style="display:flex; gap:8px; align-items:center; cursor:pointer;">
+                <input type="checkbox" id="app-inwestycje" value="inwestycje" style="width:16px; height:16px; accent-color:#3b82f6;">
+                <span style="font-size:13px; color:#cbd5e1;">🏗️ Inwestycje</span>
+            </label>
+            <label style="display:flex; gap:8px; align-items:center; cursor:pointer;">
+                <input type="checkbox" id="app-admin" value="admin" style="width:16px; height:16px; accent-color:#3b82f6;">
+                <span style="font-size:13px; color:#cbd5e1;">🗂️ Zasoby</span>
+            </label>
+            <label style="display:flex; gap:8px; align-items:center; cursor:pointer;">
+                <input type="checkbox" id="app-projekt" value="projekt" style="width:16px; height:16px; accent-color:#3b82f6;">
+                <span style="font-size:13px; color:#cbd5e1;">📁 Projekt</span>
+            </label>
+            <label style="display:flex; gap:8px; align-items:center; cursor:pointer;">
+                <input type="checkbox" id="app-kontakty" value="kontakty" style="width:16px; height:16px; accent-color:#3b82f6;">
+                <span style="font-size:13px; color:#cbd5e1;">📇 Baza kontaktów</span>
+            </label>
+            <label style="display:flex; gap:8px; align-items:center; cursor:pointer;">
+                <input type="checkbox" id="app-usterki" value="usterki" style="width:16px; height:16px; accent-color:#3b82f6;">
+                <span style="font-size:13px; color:#cbd5e1;">⚠️ Panel usterek</span>
+            </label>
+            <label style="display:flex; gap:8px; align-items:center; cursor:pointer;">
+                <input type="checkbox" id="app-harmonogram" value="harmonogram" style="width:16px; height:16px; accent-color:#3b82f6;">
+                <span style="font-size:13px; color:#cbd5e1;">📅 Harmonogram</span>
+            </label>
+            <label style="display:flex; gap:8px; align-items:center; cursor:pointer;">
+                <input type="checkbox" id="app-company" value="company" style="width:16px; height:16px; accent-color:#3b82f6;">
+                <span style="font-size:13px; color:#cbd5e1;">🏢 Zarządzanie firmą</span>
+            </label>
+        </div>
+        <div id="apps-alert" class="alert" style="margin-top: 10px;"></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeAppsModal()">Anuluj</button>
+            <button class="btn-save" onclick="saveApps()">Zapisz</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let companies = [];
+    let csrfToken = '';
+    let currentResetId = null;
+    let currentAppsId = null;
+    let currentEditId = null;
+    let availableBackups = {};
+    let pendingRestoreData = null;
+
+    function openEditModal(id) {
+        currentEditId = id;
+        const c = companies.find(x => x.id === id);
+        if (!c) return;
+        document.getElementById('edit-comp-name').textContent = c.name;
+        document.getElementById('edit-name').value = c.name;
+        document.getElementById('edit-email').value = c.adminEmail;
+        document.getElementById('edit-pass1').value = '';
+        document.getElementById('edit-pass2').value = '';
+        const alertEl = document.getElementById('edit-alert');
+        alertEl.style.display = 'none'; alertEl.className = 'alert';
+        document.getElementById('edit-modal').style.display = 'flex';
+        document.getElementById('edit-name').focus();
+    }
+
+    function closeEditModal() {
+        currentEditId = null;
+        document.getElementById('edit-modal').style.display = 'none';
+    }
+
+    async function saveEdit() {
+        if (!currentEditId) return;
+        const name      = document.getElementById('edit-name').value.trim();
+        const adminEmail = document.getElementById('edit-email').value.trim();
+        const pass1     = document.getElementById('edit-pass1').value;
+        const pass2     = document.getElementById('edit-pass2').value;
+        const alertEl   = document.getElementById('edit-alert');
+
+        function showEditMsg(msg, type) {
+            alertEl.textContent = msg;
+            alertEl.className = 'alert alert-' + type;
+            alertEl.style.display = 'block';
+        }
+
+        if (!name)       return showEditMsg('Podaj nazwę firmy.', 'err');
+        if (!adminEmail) return showEditMsg('Podaj e-mail administratora.', 'err');
+
+        // 1. Zapisz dane firmy (nazwa + email)
+        const editRes = await fetch(`/api/companies/${currentEditId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            body: JSON.stringify({ name, adminEmail })
+        });
+        if (!editRes.ok) {
+            const d = await editRes.json().catch(() => ({}));
+            return showEditMsg(d.error || 'Błąd zapisu danych firmy.', 'err');
+        }
+
+        // 2. Jeśli wpisano nowe hasło — zresetuj je
+        if (pass1 || pass2) {
+            if (pass1.length < 4) return showEditMsg('Hasło musi mieć min. 4 znaki.', 'err');
+            if (pass1 !== pass2)  return showEditMsg('Hasła nie są identyczne.', 'err');
+
+            const passRes = await fetch(`/api/companies/${currentEditId}/reset-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                body: JSON.stringify({ newPassword: pass1 })
+            });
+            if (!passRes.ok) {
+                const d = await passRes.json().catch(() => ({}));
+                return showEditMsg(d.error || 'Błąd resetowania hasła.', 'err');
+            }
+        }
+
+        showEditMsg('✅ Zmiany zostały zapisane.', 'ok');
+        await init();
+        setTimeout(() => closeEditModal(), 1600);
+    }
+
+    async function deleteFromModal() {
+        if (!currentEditId) return;
+        const c = companies.find(x => x.id === currentEditId);
+        if (!c) return;
+        if (!confirm(`Usuń firmę "${c.name}"?\n\nUwaga: dane inwestycji nie zostaną usunięte automatycznie.`)) return;
+        const res = await fetch(`/api/companies/${currentEditId}`, {
+            method: 'DELETE',
+            headers: { 'X-CSRF-Token': csrfToken }
+        });
+        if (res.ok) { closeEditModal(); await init(); }
+        else alert('Błąd usuwania firmy.');
+    }
+
+    function openAppsModal(id, name) {
+        currentAppsId = id;
+        document.getElementById('apps-comp-name').textContent = name;
+        const company = companies.find(c => c.id === id);
+        const apps = company.apps || ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company'];
+        
+        ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company'].forEach(app => {
+            const el = document.getElementById(`app-${app}`);
+            if (el) el.checked = apps.includes(app);
+        });
+
+        document.getElementById('apps-alert').style.display = 'none';
+        document.getElementById('apps-modal').style.display = 'flex';
+    }
+
+    function closeAppsModal() {
+        currentAppsId = null;
+        document.getElementById('apps-modal').style.display = 'none';
+    }
+
+    async function saveApps() {
+        if (!currentAppsId) return;
+        const apps = ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company']
+            .filter(app => document.getElementById(`app-${app}`).checked);
+
+        const alertEl = document.getElementById('apps-alert');
+
+        const res = await fetch(`/api/companies/${currentAppsId}/apps`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            body: JSON.stringify({ apps })
+        });
+        
+        if (res.ok) {
+            closeAppsModal();
+            showAlert(document.getElementById('add-alert'), 'ok', 'Aplikacje firmy zostały zaktualizowane.');
+            await init();
+        } else {
+            const data = await res.json().catch(()=>({}));
+            showAlert(alertEl, 'err', data.error || 'Błąd podczas aktualizacji aplikacji.');
+        }
+    }
+
+    function openResetModal(id, name) {
+        currentResetId = id;
+        document.getElementById('reset-comp-name').textContent = name;
+        document.getElementById('reset-pass1').value = '';
+        document.getElementById('reset-pass2').value = '';
+        document.getElementById('reset-alert').style.display = 'none';
+        document.getElementById('reset-modal').style.display = 'flex';
+    }
+
+    function closeResetModal() {
+        currentResetId = null;
+        document.getElementById('reset-modal').style.display = 'none';
+    }
+
+    async function saveNewPassword() {
+        if (!currentResetId) return;
+        const pass1 = document.getElementById('reset-pass1').value;
+        const pass2 = document.getElementById('reset-pass2').value;
+        const alertEl = document.getElementById('reset-alert');
+
+        if (!pass1 || pass1.length < 4) return showAlert(alertEl, 'err', 'Hasło musi mieć min. 4 znaki!');
+        if (pass1 !== pass2) return showAlert(alertEl, 'err', 'Hasła nie są identyczne!');
+
+        const res = await fetch(`/api/companies/${currentResetId}/reset-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            body: JSON.stringify({ newPassword: pass1 })
+        });
+        
+        if (res.ok) {
+            closeResetModal();
+            showAlert(document.getElementById('add-alert'), 'ok', 'Hasło firmy zostało pomyślnie zresetowane.');
+        } else {
+            const data = await res.json().catch(()=>({}));
+            showAlert(alertEl, 'err', data.error || 'Błąd podczas resetowania hasła.');
+        }
+    }
+
+    async function init() {
+        initHeader();
+        try {
+            const [csrfRes, compRes] = await Promise.all([
+                fetch('/api/csrf-token'),
+                fetch('/api/companies')
+            ]);
+            if (compRes.status === 401 || compRes.status === 403) { window.location.href = '/index.html'; return; }
+            if (csrfRes.ok) csrfToken = (await csrfRes.json()).csrfToken;
+            companies = await compRes.json();
+            renderList();
+            await loadBackups();
+        } catch (e) { console.error(e); }
+    }
+
+    function renderList() {
+        const tbody = document.getElementById('comp-list');
+        if (!companies.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Brak zarejestrowanych firm</td></tr>';
+            return;
+        }
+        tbody.innerHTML = companies.map(c => {
+            const max = c.maxInvestments ?? 1;
+            const cur = c.currentInvestments ?? 0;
+            const atLimit = cur >= max;
+            return `
+            <tr>
+                <td><span class="badge-id">${c.id}</span></td>
+                <td><strong>${c.name}</strong></td>
+                <td>${c.adminEmail}</td>
+                <td>
+                    <div class="limit-cell">
+                        <input
+                            type="number" min="1" max="999"
+                            class="limit-input"
+                            id="limit-input-${c.id}"
+                            value="${max}"
+                            data-original="${max}"
+                            data-company-id="${c.id}"
+                            oninput="onLimitChange('${c.id}')"
+                        >
+                        <button
+                            class="btn-save-limit"
+                            id="limit-btn-${c.id}"
+                            onclick="saveMaxInvestments('${c.id}')"
+                        >Zapisz</button>
+                    </div>
+                    <div class="inv-count ${atLimit ? 'at-limit' : ''}">
+                        Obecnie: ${cur} / ${max}
+                    </div>
+                </td>
+                <td><button class="btn-change" onclick="openAppsModal('${c.id}', '${c.name}')">Zarządzaj</button></td>
+                <td><button class="btn-edit" onclick="openEditModal('${c.id}')">&#9998; Edytuj</button></td>
+            </tr>`;
+        }).join('');
+    }
+
+    async function addCompany() {
+        const name = document.getElementById('comp-name').value.trim();
+        const adminEmail = document.getElementById('comp-email').value.trim();
+        const adminPassword = document.getElementById('comp-pass').value;
+        const alertEl = document.getElementById('add-alert');
+
+        if (!name || !adminEmail || !adminPassword) return showAlert(alertEl, 'err', 'Wypełnij wszystkie pola!');
+
+        const res = await fetch('/api/companies', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            body: JSON.stringify({ name, adminEmail, adminPassword })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            showAlert(alertEl, 'ok', `Firma "${name}" została dodana.`);
+            document.getElementById('comp-name').value = '';
+            document.getElementById('comp-email').value = '';
+            document.getElementById('comp-pass').value = '';
+            await init();
+        } else {
+            showAlert(alertEl, 'err', data.error || 'Błąd zapisu');
+        }
+    }
+
+    function onLimitChange(companyId) {
+        const input = document.getElementById(`limit-input-${companyId}`);
+        const btn = document.getElementById(`limit-btn-${companyId}`);
+        const original = parseInt(input.dataset.original, 10);
+        const current = parseInt(input.value, 10);
+        const changed = !isNaN(current) && current !== original && current >= 1;
+        input.classList.toggle('changed', changed);
+        btn.classList.toggle('visible', changed);
+    }
+
+    async function saveMaxInvestments(companyId) {
+        const input = document.getElementById(`limit-input-${companyId}`);
+        const btn = document.getElementById(`limit-btn-${companyId}`);
+        const newLimit = parseInt(input.value, 10);
+        if (isNaN(newLimit) || newLimit < 1) {
+            showAlert(document.getElementById('add-alert'), 'err', 'Limit musi wynosić co najmniej 1.');
+            return;
+        }
+        btn.textContent = 'Zapisywanie...';
+        btn.disabled = true;
+        try {
+            const res = await fetch(`/api/companies/${companyId}/max-investments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                body: JSON.stringify({ maxInvestments: newLimit })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                input.dataset.original = newLimit;
+                input.classList.remove('changed');
+                btn.classList.remove('visible');
+                showAlert(document.getElementById('add-alert'), 'ok', `Limit inwestycji dla firmy został zmieniony na ${newLimit}.`);
+                await init(); // odśwież listę żeby zaktualizować licznik
+            } else {
+                showAlert(document.getElementById('add-alert'), 'err', data.error || 'Błąd zapisu limitu.');
+                btn.textContent = 'Zapisz';
+                btn.disabled = false;
+            }
+        } catch(e) {
+            showAlert(document.getElementById('add-alert'), 'err', 'Błąd połączenia z serwerem.');
+            btn.textContent = 'Zapisz';
+            btn.disabled = false;
+        }
+    }
+
+    async function deleteCompany(id, name) {
+        if (!confirm(`Usunąć firmę "${name}"?\n\nUwaga: dane inwestycji nie zostaną usunięte automatycznie.`)) return;
+        const res = await fetch(`/api/companies/${id}`, {
+            method: 'DELETE',
+            headers: { 'X-CSRF-Token': csrfToken }
+        });
+        if (res.ok) await init();
+        else alert('Błąd usuwania firmy');
+    }
+
+    async function changeAdminPassword() {
+        const pass1 = document.getElementById('new-admin-pass').value;
+        const pass2 = document.getElementById('confirm-admin-pass').value;
+        const alertEl = document.getElementById('pass-alert');
+
+        if (!pass1 || pass1.length < 4) return showAlert(alertEl, 'err', 'Hasło musi mieć min. 4 znaki!');
+        if (pass1 !== pass2) return showAlert(alertEl, 'err', 'Hasła nie są identyczne!');
+
+        const res = await fetch('/api/admin/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            body: JSON.stringify({ newPass: pass1 })
+        });
+        if (res.ok) {
+            showAlert(alertEl, 'ok', 'Hasło zmienione! Zaloguj się ponownie.');
+            setTimeout(logout, 2000);
+        } else {
+            showAlert(alertEl, 'err', 'Błąd zmiany hasła');
+        }
+    }
+
+    function showAlert(el, type, msg) {
+        el.className = `alert alert-${type}`;
+        el.textContent = msg;
+        el.style.display = 'block';
+        setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
+
+    async function logout() {
+        await fetch('/api/logout', { method: 'POST', headers: { 'X-CSRF-Token': csrfToken } });
+        window.location.href = '/index.html';
+    }
+
+    async function initHeader() {
+        try {
+            const res = await fetch('/api/me');
+            if (!res.ok) return;
+            const me = await res.json();
+            document.getElementById('user-avatar').textContent = (me.name || me.email || '?')[0].toUpperCase();
+            const nav = document.getElementById('header-nav');
+            const companyApps = me.companyApps || ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company'];
+            const tiles = [
+                { id: 'sales', href: '/developer.html', icon: '📈', name: 'Panel Sprzedaży', perm: 'sales' },
+                { id: 'inwestycje', href: '/inwestycje.html', icon: '🏗️', name: 'Inwestycje', perm: 'inwestycje' },
+                { id: 'admin', href: '/admin.html', icon: '🗂️', name: 'Zasoby', perm: 'admin' },
+                { id: 'projekt', href: '/projekt.html', icon: '📁', name: 'Projekt', perm: 'projekt' },
+                { id: 'kontakty', href: '/kontakty.html', icon: '📇', name: 'Baza kontaktów', perm: 'kontakty' },
+                { id: 'usterki', href: '/usterki.html', icon: '⚠️', name: 'Panel Usterek', perm: 'usterki' },
+                { id: 'harmonogram', href: '/harmonogram.html', icon: '📅', name: 'Harmonogram', perm: 'harmonogram' },
+                { id: 'company', href: '/company-admin.html', icon: '🏢', name: 'Zarządzanie Firmą', perm: 'company' },
+                { id: 'superadmin', href: '/superadmin.html', icon: '🔑', name: 'Panel SuperAdmina', perm: 'superadmin' }
+            ];
+            const currentPath = window.location.pathname;
+            nav.innerHTML = tiles.filter(t => {
+                if (t.id === 'superadmin') return me.role === 'superadmin';
+                if (me.role === 'companyAdmin') return true;
+                if (t.id === 'company') return me.role === 'superadmin';
+                if (me.role === 'superadmin') return true;
+                return (me.permissions || []).includes(t.perm);
+            }).map(t => {
+                const companyHasApp = (me.role === 'superadmin') || companyApps.includes(t.perm);
+                if (!companyHasApp && me.role !== 'superadmin') {
+                    return `<a href="#" class="nav-item" style="opacity: 0.3; cursor: not-allowed;" title="${t.name} (Niedostępne dla firmy)" onclick="event.preventDefault();">${t.icon}</a>`;
+                }
+                return `<a href="${t.href}" class="nav-item ${currentPath.includes(t.href) ? 'active' : ''}" title="${t.name}">${t.icon}</a>`;
+            }).join('');
+        } catch (e) { console.error(e); }
+    }
+
+    async function loadBackups() {
+        try {
+            const res = await fetch('/api/admin/backups');
+            if (res.ok) {
+                availableBackups = await res.json();
+                renderBackups();
+            }
+        } catch (e) {
+            console.error('Błąd pobierania kopii zapasowych', e);
+        }
+    }
+
+    function renderBackups() {
+        const tbody = document.getElementById('backup-list');
+        if (companies.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="3" class="empty-state">Brak zarejestrowanych firm.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = companies.map(c => {
+            const backups = availableBackups[c.id] || [];
+            if (backups.length === 0) {
+                return `<tr>
+                    <td><strong>${c.name}</strong> <br><span class="badge-id">${c.id}</span></td>
+                    <td colspan="2" style="color: #64748b; font-size: 13px;">Brak kopii zapasowych</td>
+                </tr>`;
+            }
+
+            const options = backups.map(b => {
+                let label = b;
+                if (b.includes('_Aktualne')) {
+                    label = "⭐ " + b.replace('_Aktualne', ' (Przed przywróceniem)');
+                }
+                return `<option value="${b}">${label}</option>`;
+            }).join('');
+
+            return `<tr>
+                <td><strong>${c.name}</strong> <br><span class="badge-id">${c.id}</span></td>
+                <td>
+                    <select id="backup-sel-${c.id}" class="field-input" style="width: auto; padding: 6px 10px; cursor: pointer;">
+                        ${options}
+                    </select>
+                </td>
+                <td>
+                    <button class="btn-save" style="padding: 6px 14px; font-size: 12px; height: auto;" onclick="restoreBackup('${c.id}')">Przywróć</button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    function restoreBackup(companyId) {
+        const select = document.getElementById(`backup-sel-${companyId}`);
+        const backupId = select.value;
+        const c = companies.find(x => x.id === companyId);
+
+        pendingRestoreData = { companyId, backupId, compName: c.name };
+        
+        document.getElementById('restore-comp-name').textContent = c.name;
+        document.getElementById('restore-backup-date').textContent = backupId;
+        document.getElementById('restore-modal').style.display = 'flex';
+    }
+
+    function closeRestoreModal() {
+        pendingRestoreData = null;
+        document.getElementById('restore-modal').style.display = 'none';
+    }
+
+    async function confirmRestore(createSafeBackup) {
+        if (!pendingRestoreData) return;
+        const { companyId, backupId, compName } = pendingRestoreData;
+        
+        document.getElementById('restore-modal').style.display = 'none';
+
+        const overlay = document.getElementById('backup-loading-overlay');
+        overlay.style.display = 'flex';
+
+        try {
+            const res = await fetch('/api/admin/backups/restore', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                body: JSON.stringify({ companyId, backupId, createSafeBackup })
+            });
+            const data = await res.json();
+            
+            // Sztuczne opóźnienie dla UX (ok. 2-3 sekundy)
+            setTimeout(async () => {
+                overlay.style.display = 'none';
+                if (res.ok) {
+                    alert(`Pomyślnie przywrócono dane dla firmy ${compName} z kopii ${backupId}.\n\nSuperadminie, skontaktuj się teraz z użytkownikiem, by zweryfikował, czy wgrane dane są poprawne.`);
+                    await loadBackups();
+                } else {
+                    alert("Błąd: " + (data.error || "Nieudane przywracanie"));
+                }
+            }, 2500);
+
+        } catch (e) {
+            overlay.style.display = 'none';
+            alert("Błąd połączenia podczas przywracania.");
+        }
+    }
+
+    init();
+</script>
+</body>
+</html>

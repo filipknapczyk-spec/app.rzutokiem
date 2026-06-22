@@ -1,0 +1,7 @@
+Kod jest bezpieczny logicznie, ale aby był bezpieczny w Internecie, musisz pamiętać o dwóch rzeczach w server.js:
+
+Zmień sekret: W linijce: const COOKIE_SECRET = 'super-tajny-klucz-dewelopera-zmien-go-na-produkcji'; Wpisz tam długi, losowy ciąg znaków.
+
+Na serwerze: Uruchom aplikację przez HTTPS (certyfikat SSL). Bez tego punkt 1 (ochrona przed kradzieżą) nie istnieje.
+
+Na serwerze: Skonfiguruj prosty backup folderów data i uploads.

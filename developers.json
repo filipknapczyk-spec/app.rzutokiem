@@ -1,0 +1,20 @@
+[
+  {
+    "id": "DEV_1768953024010",
+    "name": "maxx",
+    "login": "maxx",
+    "password": "$2b$10$tymWdJ/5hAthNnvUpY4luOO.C4/ebs/jUf50Yh06yphmD8uH4MUO2"
+  },
+  {
+    "id": "DEV_1768953889894",
+    "name": "gruba ryba",
+    "login": "ryba",
+    "password": "$2b$10$v32rDAt7xmOGAFVt/okPsuMKsni3JcB/XPQHpQDCQV1XfSX8ON2XO"
+  },
+  {
+    "id": "DEV_1768982076285",
+    "name": "inbud",
+    "login": "inbud",
+    "password": "$2b$10$spyAhEYGWsT9M..BhkWF6u5cA6plMTkogaoC8yuq92S5h46mlXlbe"
+  }
+]

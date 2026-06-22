@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zarządzanie Firmą — Architektura dialogu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #0f1117; color: #f1f5f9; min-height: 100vh; padding-top: 64px; }
+
+        .bg-glow {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background: radial-gradient(ellipse 60% 50% at 20% 30%, rgba(16,185,129,0.08) 0%, transparent 70%);
+        }
+
+        /* GLOBAL HEADER */
+        .header {
+            height: 64px; position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 40px; border-bottom: 1px solid rgba(255,255,255,0.06);
+            background: rgba(15,17,23,0.85); backdrop-filter: blur(12px);
+            color: white; font-family: 'Inter', sans-serif;
+        }
+        .header-brand { display: flex; align-items: center; gap: 12px; color: inherit; cursor: default; }
+        .header-icon { width: 32px; height: 32px; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .header-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .header-title { font-size: 16px; font-weight: 700; }
+        
+        .header-nav { display: flex; gap: 8px; background: rgba(255,255,255,0.04); padding: 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); }
+        .nav-item { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; text-decoration: none; font-size: 14px; transition: all 0.2s; color: white; }
+        .nav-item:hover { background: rgba(255,255,255,0.08); }
+        .nav-item.active { background: rgba(255,255,255,0.1); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        
+        .btn-header-back {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 14px; background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+            color: #cbd5e1; font-size: 13px; font-weight: 500; text-decoration: none;
+            transition: all 0.2s; margin-right: 12px;
+        }
+        .btn-header-back:hover { background: rgba(255,255,255,0.12); color: white; border-color: rgba(255,255,255,0.2); }
+
+        .header-user { display: flex; align-items: center; gap: 12px; }
+        .user-avatar { width: 32px; height: 32px; background: linear-gradient(135deg, #6366f1, #a855f7); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+
+        .company-name-tag {
+            font-size: 12px; color: #64748b; padding: 4px 10px;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 6px;
+        }
+
+        .main { position: relative; z-index: 1; max-width: 900px; margin: 40px auto; padding: 0 32px 60px; }
+
+        .card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px; padding: 28px; margin-bottom: 28px;
+        }
+        .card-title {
+            font-size: 13px; font-weight: 700; color: #94a3b8;
+            text-transform: uppercase; letter-spacing: 0.8px;
+            margin-bottom: 20px; padding-bottom: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+        @media(max-width:680px) { .form-row { grid-template-columns: 1fr; } }
+
+        .field-label { display: block; font-size: 11px; font-weight: 600; color: #64748b; letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 6px; }
+        .field-input {
+            width: 100%; padding: 10px 12px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px; color: #f1f5f9; font-size: 13px; font-family: inherit;
+            outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .field-input::placeholder { color: #334155; }
+        .field-input:focus { border-color: rgba(16,185,129,0.5); box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
+
+        /* Checkboxy uprawnień */
+        .permissions-row {
+            display: flex; align-items: center; gap: 20px;
+            flex-wrap: wrap; margin-bottom: 16px;
+        }
+        .perm-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.6px; }
+        .checkbox-group { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .checkbox-group input[type="checkbox"] {
+            width: 16px; height: 16px; accent-color: #10b981; cursor: pointer;
+        }
+        .checkbox-group span { font-size: 13px; color: #cbd5e1; }
+
+        .btn-add {
+            padding: 10px 22px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white; border: none; border-radius: 8px;
+            font-size: 13px; font-weight: 700; font-family: inherit;
+            cursor: pointer; transition: opacity 0.2s, transform 0.15s;
+        }
+        .btn-add:hover { opacity: 0.88; transform: translateY(-1px); }
+
+        .change-pass-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+        .change-pass-row .field-group { flex: 1; min-width: 160px; }
+        .btn-change {
+            padding: 10px 18px; background: rgba(99,102,241,0.15);
+            border: 1px solid rgba(99,102,241,0.3); color: #a5b4fc;
+            border-radius: 8px; font-size: 13px; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: all 0.2s; white-space: nowrap;
+        }
+        .btn-change:hover { background: rgba(99,102,241,0.25); }
+
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left; padding: 10px 14px;
+            font-size: 11px; font-weight: 600; color: #64748b;
+            text-transform: uppercase; letter-spacing: 0.6px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        td { padding: 14px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 13px; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+
+        .perm-chip {
+            display: inline-block; font-size: 10px; font-weight: 600;
+            padding: 2px 8px; border-radius: 20px; margin: 2px;
+        }
+        .perm-sales { background: rgba(99,102,241,0.2); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); }
+        .perm-admin { background: rgba(14,165,233,0.15); color: #7dd3fc; border: 1px solid rgba(14,165,233,0.3); }
+        .perm-inwestycje { background: rgba(59,130,246,0.15); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+        .perm-projekt { background: rgba(236,72,153,0.15); color: #f9a8d4; border: 1px solid rgba(236,72,153,0.3); }
+        .perm-kontakty { background: rgba(249,115,22,0.15); color: #fdba74; border: 1px solid rgba(249,115,22,0.3); }
+        .perm-usterki { background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.25); }
+        .perm-harmonogram { background: rgba(20,184,166,0.15); color: #5eead4; border: 1px solid rgba(20,184,166,0.3); }
+
+        .btn-del {
+            padding: 5px 12px; background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.2); color: #f87171;
+            border-radius: 6px; font-size: 11px; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-del:hover { background: rgba(239,68,68,0.25); }
+
+        .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 12px; display: none; }
+        .alert-ok { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); color: #6ee7b7; }
+        .alert-err { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: #fca5a5; }
+        .empty-state { text-align: center; padding: 40px 20px; color: #475569; font-size: 14px; }
+    </style>
+</head>
+<body>
+<div class="bg-glow"></div>
+
+<header class="header">
+    <div class="header-brand">
+        <div class="header-icon"><img src="logo.png" alt="Logo"></div>
+        <div class="header-title">Architektura dialogu</div>
+    </div>
+    <div style="display: flex; align-items: center;">
+        <a href="/dashboard.html" class="btn-header-back">← Powrót</a>
+        <nav class="header-nav" id="header-nav">
+            <!-- Ikony renderowane przez JS -->
+        </nav>
+    </div>
+    <div class="header-user">
+        <span class="company-name-tag" id="company-name-tag" style="margin-right: 10px;">—</span>
+        <div class="user-avatar" id="user-avatar">?</div>
+    </div>
+</header>
+
+<main class="main">
+
+    <!-- ZMIANA HASŁA ADMINA FIRMY -->
+    <div class="card">
+        <div class="card-title">🔒 Zmiana hasła konta administratora</div>
+        <div class="change-pass-row">
+            <div class="field-group">
+                <label class="field-label">Nowe hasło</label>
+                <input type="password" id="new-pass" class="field-input" placeholder="Min. 4 znaki">
+            </div>
+            <div class="field-group">
+                <label class="field-label">Powtórz hasło</label>
+                <input type="password" id="confirm-pass" class="field-input" placeholder="Wpisz ponownie">
+            </div>
+            <button class="btn-change" onclick="changePassword()">Zaktualizuj hasło</button>
+        </div>
+        <div id="pass-alert" class="alert"></div>
+    </div>
+
+    <!-- DODAJ PRACOWNIKA -->
+    <div class="card">
+        <div class="card-title">👤 Dodaj pracownika</div>
+        <div class="form-row">
+            <div>
+                <label class="field-label">Imię i nazwisko</label>
+                <input type="text" id="usr-name" class="field-input" placeholder="Jan Kowalski">
+            </div>
+            <div>
+                <label class="field-label">E-mail (login)</label>
+                <input type="email" id="usr-email" class="field-input" placeholder="jan@firma.pl">
+            </div>
+            <div>
+                <label class="field-label">Hasło startowe</label>
+                <input type="text" id="usr-pass" class="field-input" placeholder="Hasło tymczasowe">
+            </div>
+        </div>
+        <div class="permissions-row">
+            <span class="perm-label">Uprawnienia:</span>
+            <label class="checkbox-group">
+                <input type="checkbox" id="perm-sales" value="sales">
+                <span>📈 Panel Sprzedaży</span>
+            </label>
+            <label class="checkbox-group">
+                <input type="checkbox" id="perm-inwestycje" value="inwestycje">
+                <span>🏗️ Inwestycje</span>
+            </label>
+            <label class="checkbox-group">
+                <input type="checkbox" id="perm-admin" value="admin">
+                <span>🗂️ Zasoby</span>
+            </label>
+            <label class="checkbox-group">
+                <input type="checkbox" id="perm-projekt" value="projekt">
+                <span>📁 Projekt</span>
+            </label>
+            <label class="checkbox-group">
+                <input type="checkbox" id="perm-kontakty" value="kontakty">
+                <span>📇 Kontakty</span>
+            </label>
+            <label class="checkbox-group">
+                <input type="checkbox" id="perm-usterki" value="usterki">
+                <span>⚠️ Usterki</span>
+            </label>
+            <label class="checkbox-group">
+                <input type="checkbox" id="perm-harmonogram" value="harmonogram">
+                <span>📅 Harmonogram</span>
+            </label>
+        </div>
+        <button class="btn-add" onclick="addUser()">+ DODAJ PRACOWNIKA</button>
+        <div id="add-alert" class="alert"></div>
+    </div>
+
+    <!-- LISTA PRACOWNIKÓW -->
+    <div class="card">
+        <div class="card-title">📋 Pracownicy firmy</div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Imię i nazwisko</th>
+                        <th>E-mail</th>
+                        <th>Uprawnienia</th>
+                        <th>Akcje</th>
+                    </tr>
+                </thead>
+                <tbody id="user-list">
+                    <tr><td colspan="4" class="empty-state">Ładowanie...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<script>
+    let users = [];
+    let csrfToken = '';
+    let myCompanyName = '';
+
+    async function init() {
+        initHeader();
+        try {
+            const [csrfRes, meRes, usersRes] = await Promise.all([
+                fetch('/api/csrf-token'),
+                fetch('/api/me'),
+                fetch('/api/users')
+            ]);
+            if (meRes.status === 401 || meRes.status === 403) { window.location.href = '/index.html'; return; }
+            if (csrfRes.ok) csrfToken = (await csrfRes.json()).csrfToken;
+            const me = await meRes.json();
+            myCompanyName = me.name || '—';
+            document.getElementById('company-name-tag').textContent = myCompanyName;
+
+        const companyApps = me.companyApps || ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company'];
+            ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram'].forEach(app => {
+                const cb = document.getElementById(`perm-${app}`);
+                if (cb && !companyApps.includes(app)) {
+                    cb.disabled = true;
+                    cb.parentElement.style.opacity = '0.3';
+                    cb.parentElement.style.cursor = 'not-allowed';
+                    cb.parentElement.title = 'Aplikacja niedostępna dla Twojej firmy';
+                }
+            });
+
+            if (usersRes.ok) users = await usersRes.json();
+            renderList();
+        } catch (e) { console.error(e); }
+    }
+
+    function renderList() {
+        const tbody = document.getElementById('user-list');
+        if (!users.length) {
+            tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Brak pracowników — dodaj pierwszego konto powyżej</td></tr>';
+            return;
+        }
+        tbody.innerHTML = users.map(u => {
+            const perms = (u.permissions || []).map(p => {
+                if (p === 'sales') return '<span class="perm-chip perm-sales">📈 Sprzedaż</span>';
+                if (p === 'inwestycje') return '<span class="perm-chip perm-inwestycje">🏗️ Inwestycje</span>';
+                if (p === 'admin') return '<span class="perm-chip perm-admin">🗂️ Zasoby</span>';
+                if (p === 'projekt') return '<span class="perm-chip perm-projekt">📁 Projekt</span>';
+                if (p === 'kontakty') return '<span class="perm-chip perm-kontakty">📇 Kontakty</span>';
+                if (p === 'usterki') return '<span class="perm-chip perm-usterki">⚠️ Usterki</span>';
+                if (p === 'harmonogram') return '<span class="perm-chip perm-harmonogram">📅 Harmonogram</span>';
+                return `<span class="perm-chip">${p}</span>`;
+            }).join('') || '<span style="color:#475569;font-size:12px;">brak</span>';
+            return `
+            <tr>
+                <td><strong>${u.name}</strong></td>
+                <td style="color:#94a3b8;">${u.email}</td>
+                <td>${perms}</td>
+                <td><button class="btn-del" onclick="deleteUser('${u.id}', '${u.name}')">Usuń</button></td>
+            </tr>`;
+        }).join('');
+    }
+
+    async function addUser() {
+        const name = document.getElementById('usr-name').value.trim();
+        const email = document.getElementById('usr-email').value.trim();
+        const password = document.getElementById('usr-pass').value;
+        const alertEl = document.getElementById('add-alert');
+
+        const permissions = [];
+        if (document.getElementById('perm-sales').checked) permissions.push('sales');
+        if (document.getElementById('perm-inwestycje').checked) permissions.push('inwestycje');
+        if (document.getElementById('perm-admin').checked) permissions.push('admin');
+        if (document.getElementById('perm-projekt').checked) permissions.push('projekt');
+        if (document.getElementById('perm-kontakty').checked) permissions.push('kontakty');
+        if (document.getElementById('perm-usterki').checked) permissions.push('usterki');
+        if (document.getElementById('perm-harmonogram').checked) permissions.push('harmonogram');
+
+        if (!name || !email || !password) return showAlert(alertEl, 'err', 'Wypełnij wszystkie pola!');
+        if (permissions.length === 0) return showAlert(alertEl, 'err', 'Przyznaj przynajmniej jedno uprawnienie!');
+
+        const res = await fetch('/api/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            body: JSON.stringify({ name, email, password, permissions })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            showAlert(alertEl, 'ok', `Konto dla "${name}" zostało utworzone.`);
+            document.getElementById('usr-name').value = '';
+            document.getElementById('usr-email').value = '';
+            document.getElementById('usr-pass').value = '';
+            document.getElementById('perm-sales').checked = false;
+            document.getElementById('perm-inwestycje').checked = false;
+            document.getElementById('perm-admin').checked = false;
+            document.getElementById('perm-projekt').checked = false;
+            document.getElementById('perm-kontakty').checked = false;
+            document.getElementById('perm-usterki').checked = false;
+            document.getElementById('perm-harmonogram').checked = false;
+            await init();
+        } else {
+            showAlert(alertEl, 'err', data.error || 'Błąd tworzenia konta');
+        }
+    }
+
+    async function deleteUser(id, name) {
+        if (!confirm(`Usunąć konto użytkownika "${name}"?`)) return;
+        const res = await fetch(`/api/users/${id}`, {
+            method: 'DELETE',
+            headers: { 'X-CSRF-Token': csrfToken }
+        });
+        if (res.ok) await init();
+        else alert('Błąd usuwania użytkownika');
+    }
+
+    async function changePassword() {
+        const pass1 = document.getElementById('new-pass').value;
+        const pass2 = document.getElementById('confirm-pass').value;
+        const alertEl = document.getElementById('pass-alert');
+
+        if (!pass1 || pass1.length < 4) return showAlert(alertEl, 'err', 'Hasło musi mieć min. 4 znaki!');
+        if (pass1 !== pass2) return showAlert(alertEl, 'err', 'Hasła nie są identyczne!');
+
+        const res = await fetch('/api/company/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            body: JSON.stringify({ newPass: pass1 })
+        });
+        if (res.ok) {
+            showAlert(alertEl, 'ok', 'Hasło zmienione! Zaloguj się ponownie.');
+            setTimeout(logout, 2000);
+        } else {
+            showAlert(alertEl, 'err', 'Błąd zmiany hasła');
+        }
+    }
+
+    function showAlert(el, type, msg) {
+        el.className = `alert alert-${type}`;
+        el.textContent = msg;
+        el.style.display = 'block';
+        setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
+
+    async function logout() {
+        await fetch('/api/logout', { method: 'POST', headers: { 'X-CSRF-Token': csrfToken } });
+        window.location.href = '/index.html';
+    }
+
+    async function initHeader() {
+        try {
+            const res = await fetch('/api/me');
+            if (!res.ok) return;
+            const me = await res.json();
+            document.getElementById('user-avatar').textContent = (me.name || me.email || '?')[0].toUpperCase();
+            const nav = document.getElementById('header-nav');
+            const tiles = [
+                { id: 'sales', href: '/developer.html', icon: '📈', name: 'Panel Sprzedaży', perm: 'sales' },
+                { id: 'inwestycje', href: '/inwestycje.html', icon: '🏗️', name: 'Inwestycje', perm: 'inwestycje' },
+                { id: 'admin', href: '/admin.html', icon: '🗂️', name: 'Zasoby', perm: 'admin' },
+                { id: 'projekt', href: '/projekt.html', icon: '📁', name: 'Projekt', perm: 'projekt' },
+                { id: 'kontakty', href: '/kontakty.html', icon: '📇', name: 'Baza kontaktów', perm: 'kontakty' },
+                { id: 'usterki', href: '/usterki.html', icon: '⚠️', name: 'Panel Usterek', perm: 'usterki' },
+                { id: 'harmonogram', href: '/harmonogram.html', icon: '📅', name: 'Harmonogram', perm: 'harmonogram' },
+                { id: 'company', href: '/company-admin.html', icon: '🏢', name: 'Zarządzanie Firmą', perm: 'company' },
+                { id: 'superadmin', href: '/superadmin.html', icon: '🔑', name: 'Panel SuperAdmina', perm: 'superadmin' }
+            ];
+            const currentPath = window.location.pathname;
+            const companyApps = me.companyApps || ['sales', 'admin', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company'];
+            nav.innerHTML = tiles.filter(t => {
+                if (t.id === 'superadmin') return me.role === 'superadmin';
+                if (me.role === 'companyAdmin') return true; // show all for company admin (grey out if no access)
+                if (t.id === 'company') return me.role === 'superadmin';
+                if (me.role === 'superadmin') return true;
+                return (me.permissions || []).includes(t.perm);
+            }).map(t => {
+                const companyHasApp = (me.role === 'superadmin') || companyApps.includes(t.perm);
+                if (!companyHasApp && me.role === 'companyAdmin') {
+                    return `<a href="#" class="nav-item" style="opacity: 0.3; cursor: not-allowed;" title="${t.name} (Niedostępne dla firmy)" onclick="event.preventDefault();">${t.icon}</a>`;
+                }
+                return `<a href="${t.href}" class="nav-item ${currentPath.includes(t.href) ? 'active' : ''}" title="${t.name}">${t.icon}</a>`;
+            }).join('');
+        } catch (e) { console.error(e); }
+    }
+
+    init();
+</script>
+</body>
+</html>

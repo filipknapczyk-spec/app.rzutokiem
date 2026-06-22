@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Panel Klienta — Architektura dialogu</title>
+    <link rel="stylesheet" href="css/developer.css" />
+    <script>
+      window.onerror = function(msg, url, line, col, error) {
+         alert("Error: " + msg + "\nLine: " + line + "\nCol: " + col);
+      };
+    </script>
+  </head>
+
+  <body>
+    <header class="header">
+      <div class="header-brand">
+        <div class="header-icon"><img src="logo.png" alt="Logo" /></div>
+        <div class="header-title">Architektura dialogu</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <a href="/dashboard.html" class="btn-header-back">← Powrót</a>
+        <!-- Wskaźnik statusu zapisu — aktualizowany przez developer.js -->
+        <div id="save-status-bar" style="
+          display: none;
+          font-size: 12px;
+          padding: 3px 10px;
+          border-radius: 20px;
+          font-weight: 500;
+          letter-spacing: 0.3px;
+          transition: all 0.3s ease;
+          white-space: nowrap;
+        "></div>
+        <nav class="header-nav" id="header-nav">
+          <!-- Ikony renderowane przez JS -->
+        </nav>
+      </div>
+      <div class="header-user">
+        <div class="user-avatar" id="user-avatar">?</div>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <select
+        id="inv-sel"
+        onchange="changeInvestment()"
+        style="width: 200px; padding: 6px"
+      >
+        <option value="">Wybierz Inwestycję</option>
+      </select>
+
+      <select
+        id="build-sel"
+        onchange="changeBuilding()"
+        style="width: 150px; padding: 6px"
+      >
+        <option value="">Wybierz Budynek</option>
+      </select>
+    </div>
+
+    <div id="main-view">
+      <div id="canvas-column">
+        <div class="view-controls">
+          <div
+            id="nav-elements"
+            style="
+              display: flex;
+              align-items: center;
+              gap: 10px;
+              overflow: hidden;
+            "
+          >
+            <span class="filter-label" style="white-space: nowrap"
+              >Piętro:</span
+            >
+            <div id="floor-buttons"></div>
+          </div>
+
+          <div id="pdf-toolbar">
+            <button class="btn-back" onclick="closePdf()">← POWRÓT</button>
+            <div class="doc-title" id="pdf-doc-info">Lokal: - | -</div>
+            <button class="btn-pdf-action" onclick="printPdf()">
+              🖨️ DRUKUJ
+            </button>
+            <button
+              class="btn-pdf-action"
+              id="btn-download-pdf"
+              onclick="downloadPdf()"
+            >
+              📥 POBIERZ
+            </button>
+          </div>
+        </div>
+
+        <div id="canvas-area" style="overflow: hidden">
+          <div class="zoom-controls" id="zoom-controls" style="display: none">
+            <button onclick="zoomIn()" title="Przybliż">+</button>
+            <button onclick="zoomOut()" title="Oddal">-</button>
+            <button onclick="resetZoom()" title="Reset widoku">⟲</button>
+          </div>
+          <iframe id="pdf-viewer"></iframe>
+          <div
+            class="map-container"
+            id="map-cont"
+            style="display: none; transform-origin: center center"
+          >
+            <img id="plan-img" />
+            <svg id="canvas"></svg>
+          </div>
+          <div id="no-floor-msg" style="color: #7f8c8d">
+            Wybierz inwestycję, budynek i piętro, aby zobaczyć plan
+          </div>
+        </div>
+      </div>
+
+      <!-- PRZYCISK ZWIJANIA RZUTU -->
+      <button id="toggle-canvas-btn" onclick="toggleCanvasPanel()" title="Zwiń / rozwiń rzut">
+        <span class="toggle-arrow">◄</span>
+      </button>
+
+      <div id="table-panel">
+        <div class="table-controls">
+          <div class="controls-top">
+            <div class="filter-group">
+              <span class="filter-label">Piętro:</span>
+              <select
+                id="filter-floor"
+                class="filter-select"
+                onchange="render()"
+              >
+                <option value="all">Wszystkie</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">Status:</span>
+              <select
+                id="filter-status"
+                class="filter-select"
+                onchange="render()"
+              >
+                <option value="all">Wszystkie</option>
+                <option value="wolne">Wolne</option>
+                <option value="zarezerwowane">Zarezerwowane</option>
+                <option value="sprzedane">Sprzedane</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">Typ:</span>
+              <select
+                id="filter-type"
+                class="filter-select"
+                onchange="render()"
+              >
+                <option value="all">Wszystkie</option>
+                <option value="LM">LM</option>
+                <option value="LU">LU</option>
+                <option value="KL">KL</option>
+                <option value="MP">MP</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">Pokoje:</span>
+              <select
+                id="filter-rooms"
+                class="filter-select"
+                onchange="render()"
+              >
+                <option value="all">Wszystkie</option>
+              </select>
+            </div>
+
+            <button class="btn-excel" onclick="downloadExcel()">
+              EKSPORTUJ DANE
+            </button>
+            <button
+              class="btn-import"
+              onclick="document.getElementById('import-file').click()"
+            >
+              Importuj Dane
+            </button>
+            <input
+              type="file"
+              id="import-file"
+              style="display: none"
+              accept=".csv"
+              onchange="handleImport(event)"
+            />
+
+            <input
+              type="text"
+              id="search-client"
+              class="search-input"
+              placeholder="Szukaj klienta..."
+              oninput="render()"
+            />
+          </div>
+          <div class="stats-bar">
+            <div class="stat-item">
+              Liczba lokali: <span id="stat-count" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+              Suma m²: <span id="stat-area" class="stat-value">0,00</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table id="apt-table">
+            <thead>
+              <tr>
+                <th class="col-status">Status</th>
+                <th class="col-type" style="width: 30px;">Typ</th>
+                <th class="col-nr">Nr</th>
+                <th class="col-area">m²</th>
+                <th class="col-rooms">P</th>
+                <th class="col-price">Cena (PLN)</th>
+                <th class="col-client">Nabywca</th>
+                <th class="col-contract">Umowa</th>
+                <th class="col-km">KM</th>
+                <th class="col-ki">KI</th>
+                <th class="col-changes-file">KZ</th>
+                <th class="col-mp">MP</th>
+                <th class="col-kom">KOM</th>
+              </tr>
+            </thead>
+            <tbody id="apt-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal-overlay">
+      <div class="modal">
+        <h2
+          id="modal-title"
+          style="margin: 0 0 15px 0; font-size: 18px; color: #2c3e50"
+        >
+          Edycja Lokalu
+        </h2>
+        <div class="modal-section">
+          <div class="modal-section-title">Informacje o lokalu</div>
+          <div class="grid">
+            <div class="third">
+                <label style="font-size: 10px">Typ</label>
+                <input type="text" id="m-type" readonly style="background-color: #f1f1f1; color: #555; pointer-events: none;" />
+              </div>
+              <div class="third" id="m-assigned-to-cont" style="display: none;">
+                <label style="font-size: 10px">Przypisany lokal</label>
+                <input type="text" id="m-assigned-to" readonly style="background-color: #f1f1f1; color: #555; pointer-events: none;" />
+              </div>
+              <div class="third">
+                <label style="font-size: 10px">Status sprzedaży</label>
+                <select id="m-status">
+                <option value="wolne">WOLNE</option>
+                <option value="zarezerwowane">ZAREZERWOWANE</option>
+                <option value="sprzedane">SPRZEDANE</option>
+              </select>
+            </div>
+            <div class="third">
+                <label style="font-size: 10px">Cena całkowita (PLN)</label>
+                <input type="text" id="m-price" />
+              </div>
+            <div class="third">
+              <label style="font-size: 10px">Liczba pokoi</label
+              ><input type="text" id="m-rooms" />
+            </div>
+            <div class="third">
+              <label style="font-size: 10px">Metraż m²</label
+              ><input type="text" id="m-area" />
+            </div>
+            <div class="third">
+              <label style="font-size: 10px">Balkon / Taras / Ogródek</label
+              ><input type="text" id="m-balcony" />
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-section">
+          <div class="modal-section-title">Umowy i Dokumenty</div>
+            <div class="full">
+              <!-- Drop Zone (Always visible for multiple files) -->
+              <div
+                id="dz-contract"
+                class="drop-zone"
+                onclick="document.getElementById('m-file-contract').click()"
+                style="display: block"
+              >
+                📄 Wgraj pliki lub upuść tutaj
+              </div>
+
+              <!-- Container for uploaded/pending contract files -->
+              <div id="contract-files-container" style="margin-top: 10px"></div>
+
+              <!-- Hidden input -->
+              <input
+                type="file"
+                id="m-file-contract"
+                class="hidden-file-input"
+                accept=".pdf, .jpg, .jpeg, .png"
+                multiple
+              />
+            </div>
+          </div>
+
+          <div class="modal-section">
+          <div class="modal-section-title">Dane Klienta i Karty</div>
+          <div class="grid">
+            <div class="third">
+              <input
+                type="text"
+                id="m-client"
+                placeholder="Imię i Nazwisko / Firma"
+              />
+            </div>
+            <div class="third">
+              <input type="text" id="m-phone" placeholder="Telefon" />
+            </div>
+            <div class="third">
+              <input type="text" id="m-email" placeholder="E-mail" />
+            </div>
+            <div
+              class="full"
+              style="
+                border-top: 1px solid #eee;
+                margin-top: 5px;
+                margin-bottom: -5px;
+              "
+            ></div>
+            <div>
+              <label style="font-size: 10px">KM</label>
+
+              <!-- State: Empty (Drop Zone) -->
+              <div
+                id="dz-km"
+                class="drop-zone"
+                onclick="document.getElementById('m-file-km').click()"
+              >
+                📁 Wgraj plik lub upuść tutaj
+              </div>
+
+              <!-- State: Uploaded (Pill) -->
+              <div id="pill-km" class="file-pill" style="display: none">
+                <span class="file-name" id="name-km">📄 Karta KM</span>
+                <button
+                  class="btn-remove-file"
+                  onclick="deleteFile('km')"
+                  title="Usuń plik"
+                >
+                  ✖
+                </button>
+              </div>
+
+              <!-- Hidden input -->
+              <input
+                type="file"
+                id="m-file-km"
+                class="hidden-file-input"
+                accept=".pdf, .jpg, .jpeg, .png"
+              />
+            </div>
+            <div>
+              <label style="font-size: 10px">KI</label>
+
+              <!-- State: Empty (Drop Zone) -->
+              <div
+                id="dz-ki"
+                class="drop-zone"
+                onclick="document.getElementById('m-file-ki').click()"
+              >
+                📁 Wgraj plik lub upuść tutaj
+              </div>
+
+              <!-- State: Uploaded (Pill) -->
+              <div id="pill-ki" class="file-pill" style="display: none">
+                <span class="file-name" id="name-ki">📄 Karta KI</span>
+                <button
+                  class="btn-remove-file"
+                  onclick="deleteFile('ki')"
+                  title="Usuń plik"
+                >
+                  ✖
+                </button>
+              </div>
+
+              <!-- Hidden input -->
+              <input
+                type="file"
+                id="m-file-ki"
+                class="hidden-file-input"
+                accept=".pdf, .jpg, .jpeg, .png"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="modal-section">
+          <div class="modal-section-title">Zmiany i Dodatki</div>
+          <div class="grid">
+            <div class="half" style="position: relative;">
+                <!-- Ukryty stary input dla zgodnoci lub trybu MP/K -->
+                <input type="text" id="m-parking" style="display:none;" />
+                <div id="m-parking-dropdown" class="multi-select-container">
+                  <div class="multi-select-header" onclick="toggleDropdown('m-parking-list')">Wybierz miejsce postojowe...</div>
+                  <div class="multi-select-list" id="m-parking-list" style="display:none;"></div>
+                </div>
+              </div>
+            <div class="half" style="position: relative;">
+                <!-- Ukryty stary input dla zgodnoci lub trybu MP/K -->
+                <input type="text" id="m-cellar" style="display:none;" />
+                <div id="m-cellar-dropdown" class="multi-select-container">
+                  <div class="multi-select-header" onclick="toggleDropdown('m-cellar-list')">Wybierz komórkę...</div>
+                  <div class="multi-select-list" id="m-cellar-list" style="display:none;"></div>
+                </div>
+              </div>
+            <div class="half">
+              <label style="font-size: 10px">Zmiany lokatorskie?</label>
+              <select id="m-has-changes">
+                <option value="-">NIE</option>
+                <option value="TAK">TAK</option>
+              </select>
+            </div>
+            <div
+              class="full"
+              style="border-top: 1px solid #eee; padding-top: 5px"
+            >
+              <label style="font-size: 10px">KZ</label>
+
+              <!-- Drop Zone (Always visible for multiple files) -->
+              <div
+                id="dz-kz"
+                class="drop-zone"
+                onclick="document.getElementById('m-file-kz').click()"
+              >
+                📁 Wgraj plik(i) lub upuść tutaj
+              </div>
+
+              <!-- File List Container -->
+              <div
+                id="kz-file-list"
+                style="
+                  margin-top: 5px;
+                  display: flex;
+                  flex-direction: column;
+                  gap: 5px;
+                "
+              ></div>
+
+              <!-- Hidden input -->
+              <input
+                type="file"
+                id="m-file-kz"
+                class="hidden-file-input"
+                accept=".pdf, .jpg, .jpeg, .png"
+                multiple
+              />
+            </div>
+            <div class="full">
+              <textarea id="m-info" rows="2" placeholder="Uwagi..."></textarea>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 15px">
+          <button class="btn-close" onclick="closeModal()">Anuluj</button>
+          <button class="btn-save" onclick="saveAptData()">ZAPISZ</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/developer.js"></script>
+    <script>
+      // ============================================================
+      // TOGGLE RZUTU (zwijanie / rozwijanie panelu rzutu)
+      // ============================================================
+      (function () {
+        const isMobile = () => window.innerWidth <= 768;
+
+        // Stan: na telefonie domyślnie zwinięty, na desktopie rozwinięty
+        let canvasVisible = !isMobile();
+
+        function positionToggleBtn() {
+          const btn = document.getElementById('toggle-canvas-btn');
+          const col = document.getElementById('canvas-column');
+          const mainView = document.getElementById('main-view');
+          if (!btn || !col) return;
+
+          const colWidth = col.getBoundingClientRect().width;
+          const mainLeft = mainView.getBoundingClientRect().left;
+          const colLeft  = col.getBoundingClientRect().left;
+          const relativeLeft = colLeft - mainLeft + colWidth;
+
+          // Przycisk siedzi na prawej krawędzi canvas-column
+          // Gdy col szerokość = 0, przycisk jest przy lewej krawędzi main-view
+          btn.style.left = Math.max(0, relativeLeft - 10) + 'px';
+        }
+
+        function applyState(animated) {
+          const col      = document.getElementById('canvas-column');
+          const btn      = document.getElementById('toggle-canvas-btn');
+          const mainView = document.getElementById('main-view');
+          if (!col || !btn) return;
+
+          if (canvasVisible) {
+            col.classList.remove('collapsed');
+            if (isMobile()) col.classList.add('expanded');
+            btn.classList.remove('collapsed');
+            mainView.classList.remove('canvas-collapsed');
+          } else {
+            col.classList.add('collapsed');
+            if (isMobile()) col.classList.remove('expanded');
+            btn.classList.add('collapsed');
+            mainView.classList.add('canvas-collapsed');
+          }
+
+          // Po animacji uaktualnij pozycję przycisku
+          setTimeout(positionToggleBtn, animated ? 310 : 0);
+        }
+
+        window.toggleCanvasPanel = function () {
+          canvasVisible = !canvasVisible;
+          applyState(true);
+        };
+
+        // Inicjalizacja po załadowaniu strony
+        window.addEventListener('DOMContentLoaded', function () {
+          applyState(false);
+        });
+
+        // Reaguj na zmianę rozmiaru okna (np. obrót telefonu)
+        window.addEventListener('resize', function () {
+          const shouldBeVisible = !isMobile();
+          if (shouldBeVisible !== canvasVisible) {
+            canvasVisible = shouldBeVisible;
+            applyState(false);
+          } else {
+            positionToggleBtn();
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

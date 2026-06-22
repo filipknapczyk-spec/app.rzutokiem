@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Usterek — Architektura dialogu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #0f1117; color: #f1f5f9; min-height: 100vh; padding-top: 64px; }
+        .bg-glow {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background: radial-gradient(ellipse 60% 50% at 10% 20%, rgba(239,68,68,0.08) 0%, transparent 70%);
+        }
+        /* GLOBAL HEADER */
+        .header {
+            height: 64px; position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 40px; border-bottom: 1px solid rgba(255,255,255,0.06);
+            background: rgba(15,17,23,0.85); backdrop-filter: blur(12px);
+            color: white; font-family: 'Inter', sans-serif;
+        }
+        .header-brand { display: flex; align-items: center; gap: 12px; color: inherit; cursor: default; }
+        .header-icon { width: 32px; height: 32px; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .header-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .header-title { font-size: 16px; font-weight: 700; }
+        
+        .header-nav { display: flex; gap: 8px; background: rgba(255,255,255,0.04); padding: 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); }
+        .nav-item { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; text-decoration: none; font-size: 14px; transition: all 0.2s; color: white; }
+        .nav-item:hover { background: rgba(255,255,255,0.08); }
+        .nav-item.active { background: rgba(255,255,255,0.1); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        
+        .btn-header-back {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 14px; background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+            color: #cbd5e1; font-size: 13px; font-weight: 500; text-decoration: none;
+            transition: all 0.2s; margin-right: 12px;
+        }
+        .btn-header-back:hover { background: rgba(255,255,255,0.12); color: white; border-color: rgba(255,255,255,0.2); }
+
+        .header-user { display: flex; align-items: center; gap: 12px; }
+        .user-avatar { width: 32px; height: 32px; background: linear-gradient(135deg, #6366f1, #a855f7); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+        .main { position: relative; z-index: 1; max-width: 1000px; margin: 40px auto; padding: 0 32px 60px; }
+        .card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px; padding: 28px; margin-bottom: 28px;
+        }
+        .card-title {
+            font-size: 13px; font-weight: 700; color: #94a3b8;
+            text-transform: uppercase; letter-spacing: 0.8px;
+            margin-bottom: 20px; padding-bottom: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .grid-form { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+        .field-group { display: flex; flex-direction: column; gap: 6px; }
+        .field-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; }
+        .field-input, select, textarea {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px; color: #f1f5f9; padding: 10px; font-size: 13px; outline: none; font-family: inherit;
+        }
+        .btn-submit {
+            background: linear-gradient(135deg, #ef4444, #b91c1c);
+            color: white; border: none; border-radius: 8px;
+            padding: 12px; font-size: 13px; font-weight: 700; cursor: pointer; width: 100%;
+        }
+        .defect-list { display: grid; gap: 12px; }
+        .defect-item {
+            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px; padding: 20px; position: relative;
+        }
+        .defect-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .defect-title { font-weight: 700; font-size: 15px; }
+        .status-pill { font-size: 10px; font-weight: 800; padding: 2px 10px; border-radius: 20px; text-transform: uppercase; }
+        .st-new { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+        .st-done { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.2); }
+        .defect-desc { font-size: 13px; color: #94a3b8; line-height: 1.5; margin-bottom: 12px; }
+        .defect-footer { display: flex; gap: 15px; font-size: 11px; color: #475569; }
+        .badge-type { background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<header class="header">
+    <div class="header-brand">
+        <div class="header-icon"><img src="logo.png" alt="Logo"></div>
+        <div class="header-title">Architektura dialogu</div>
+    </div>
+    <div style="display: flex; align-items: center;">
+        <a href="/dashboard.html" class="btn-header-back">← Powrót</a>
+        <nav class="header-nav" id="header-nav">
+            <!-- Ikony renderowane przez JS -->
+        </nav>
+    </div>
+    <div class="header-user">
+        <div class="user-avatar" id="user-avatar">?</div>
+    </div>
+</header>
+<main class="main">
+    <div class="card">
+        <div class="card-title">Zgłoś nową usterkę / uwagę</div>
+        <div class="grid-form">
+            <div class="field-group">
+                <label class="field-label">Tytuł zgłoszenia</label>
+                <input type="text" id="u-title" class="field-input" placeholder="np. Brak zbrojenia w słupie S1">
+            </div>
+            <div class="field-group">
+                <label class="field-label">Typ błędu</label>
+                <select id="u-type">
+                    <option value="realizacja">Błąd realizacji (wykonawca)</option>
+                    <option value="projekt">Błąd projektowy (architekt/konstruktor)</option>
+                    <option value="inne">Inne / Uwaga ogólna</option>
+                </select>
+            </div>
+            <div class="field-group" style="grid-column: span 2;">
+                <label class="field-label">Szczegółowy opis</label>
+                <textarea id="u-desc" rows="3" class="field-input" placeholder="Opisz dokładnie problem..."></textarea>
+            </div>
+        </div>
+        <button class="btn-submit" onclick="addUsterka()">WYŚLIJ ZGŁOSZENIE</button>
+    </div>
+    <div class="card">
+        <div class="card-title">Ostatnie zgłoszenia</div>
+        <div class="defect-list" id="defect-list">
+            <div class="defect-item">
+                <div class="defect-header">
+                    <div class="defect-title">Pęknięcie ściany w osi A-4</div>
+                    <span class="status-pill st-new">Nowe</span>
+                </div>
+                <p class="defect-desc">Widoczne rysy pionowe na wysokości 1.5m. Wymagana weryfikacja przez konstruktora.</p>
+                <div class="defect-footer">
+                    <span>📅 2024-05-13</span>
+                    <span class="badge-type">Błąd realizacji</span>
+                    <span style="margin-left:auto; cursor:pointer; color:#ef4444;" onclick="this.closest('.defect-item').remove()">Usuń</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+<script>
+    function addUsterka() {
+        const title = document.getElementById('u-title').value;
+        const type = document.getElementById('u-type').options[document.getElementById('u-type').selectedIndex].text;
+        const desc = document.getElementById('u-desc').value;
+        if(!title || !desc) return alert("Uzupełnij wszystkie pola!");
+        
+        const list = document.getElementById('defect-list');
+        const div = document.createElement('div');
+        div.className = 'defect-item';
+        div.innerHTML = `
+            <div class="defect-header">
+                <div class="defect-title">${title}</div>
+                <span class="status-pill st-new">Nowe</span>
+            </div>
+            <p class="defect-desc">${desc}</p>
+            <div class="defect-footer">
+                <span>📅 ${new Date().toISOString().split('T')[0]}</span>
+                <span class="badge-type">${type}</span>
+                <span style="margin-left:auto; cursor:pointer; color:#ef4444;" onclick="this.closest('.defect-item').remove()">Usuń</span>
+            </div>
+        `;
+        list.prepend(div);
+        document.getElementById('u-title').value = '';
+        document.getElementById('u-desc').value = '';
+    }
+    async function initHeader() {
+        try {
+            const res = await fetch('/api/me');
+            if (!res.ok) return;
+            const me = await res.json();
+            document.getElementById('user-avatar').textContent = (me.name || me.email || '?')[0].toUpperCase();
+            const nav = document.getElementById('header-nav');
+            const tiles = [
+                { id: 'sales', href: '/developer.html', icon: '📈', name: 'Panel Sprzedaży', perm: 'sales' },
+                { id: 'admin', href: '/admin.html', icon: '✏️', name: 'Edytor sprzedaży', perm: 'admin' },
+                { id: 'projekt', href: '/projekt.html', icon: '📁', name: 'Projekt', perm: 'projekt' },
+                { id: 'kontakty', href: '/kontakty.html', icon: '📇', name: 'Baza kontaktów', perm: 'kontakty' },
+                { id: 'usterki', href: '/usterki.html', icon: '⚠️', name: 'Panel Usterek', perm: 'usterki' },
+                { id: 'harmonogram', href: '/harmonogram.html', icon: '📅', name: 'Harmonogram', perm: 'harmonogram' },
+                { id: 'company', href: '/company-admin.html', icon: '🏢', name: 'Zarządzanie Firmą', perm: 'company' },
+                { id: 'superadmin', href: '/superadmin.html', icon: '🔑', name: 'Panel SuperAdmina', perm: 'superadmin' }
+            ];
+            const currentPath = window.location.pathname;
+                        const companyApps = me.companyApps || ['sales', 'admin', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company'];
+            nav.innerHTML = tiles.filter(t => {
+                if (t.id === 'superadmin') return me.role === 'superadmin';
+                if (me.role === 'companyAdmin') return true;
+                if (t.id === 'company') return me.role === 'superadmin';
+                if (me.role === 'superadmin') return true;
+                return (me.permissions || []).includes(t.perm);
+            }).map(t => {
+                const companyHasApp = (me.role === 'superadmin') || companyApps.includes(t.perm);
+                if (!companyHasApp && me.role !== 'superadmin') {
+                    return `<a href="#" class="nav-item" style="opacity: 0.3; cursor: not-allowed;" title="${t.name} (Niedostępne dla firmy)" onclick="event.preventDefault();">${t.icon}</a>`;
+                }
+                return `<a href="${t.href}" class="nav-item ${currentPath.includes(t.href) ? 'active' : ''}" title="${t.name}">${t.icon}</a>`;
+            }).join('');
+        } catch (e) { console.error(e); }
+    }
+    initHeader();
+</script>
+</body>
+</html>

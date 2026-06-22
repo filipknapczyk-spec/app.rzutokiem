@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Zasoby — Architektura dialogu</title>
+    <style>
+        body { margin:0; padding:0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; font-family: 'Inter', 'Segoe UI', sans-serif; background: #f4f7f6; }
+        
+        /* Header */
+        .header { display: flex; justify-content: space-between; align-items: center; background-color: #2c3e50; padding: 10px 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); color: white; z-index: 1000; }
+        .header-brand { display: flex; align-items: center; gap: 10px; }
+        .header-icon img { height: 35px; }
+        .header-title { font-size: 16px; font-weight: bold; letter-spacing: 1px; color: #ecf0f1; text-transform: uppercase; }
+        .header-nav { display: flex; gap: 15px; }
+        .nav-item { color: #bdc3c7; text-decoration: none; font-size: 14px; font-weight: 500; padding: 5px 10px; border-radius: 4px; transition: all 0.2s; }
+        .nav-item:hover, .nav-item.active { background-color: #34495e; color: #fff; }
+        .user-avatar { width: 35px; height: 35px; background-color: #3498db; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 16px; }
+        .btn-header-back { color: white; text-decoration: none; font-size: 12px; margin-right: 15px; background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 4px; }
+        
+        /* Admin Toolbar */
+        .admin-toolbar { background: #fff; border-bottom: 1px solid #dee2e6; padding: 10px 20px; display: flex; gap: 20px; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 999; flex-wrap: wrap; }
+        .toolbar-group { display: flex; flex-direction: column; gap: 5px; }
+        .toolbar-group label { font-size: 11px; color: #6c757d; font-weight: bold; text-transform: uppercase; }
+        .toolbar-group select, .toolbar-group input { padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; min-width: 150px; }
+        .btn-tool { padding: 6px 12px; background: #fff; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 5px; font-weight: 500; }
+        .btn-tool:hover { background: #e9ecef; }
+        .btn-save { background: #007bff; color: white; border-color: #007bff; font-weight: bold; }
+        .btn-save:hover { background: #0056b3; }
+        
+        /* Dropdown */
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content { display: none; position: absolute; background-color: #f9f9f9; min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1001; border-radius: 4px; overflow: hidden; }
+        .dropdown-content a { color: black; padding: 10px 16px; text-decoration: none; display: block; font-size: 13px; border-bottom: 1px solid #eee; }
+        .dropdown-content a:hover { background-color: #f1f1f1; }
+        .dropdown:hover .dropdown-content { display: block; }
+        
+        /* Main Workspace */
+        .main-workspace { display: flex; flex: 1; overflow: hidden; }
+        
+        /* Left Panel (Map) */
+        .left-panel { flex: 6; position: relative; border-right: 1px solid #dee2e6; background: #e9ecef; display: flex; align-items: center; justify-content: center; overflow: auto; }
+        .map-container { position: relative; background: white; box-shadow: 0 0 20px rgba(0,0,0,0.1); display: none; }
+        #plan-img { display: block; max-width: 100%; max-height: 80vh; object-fit: contain; }
+        svg { position: absolute; top:0; left:0; width:100%; height:100%; }
+        
+        /* SVG Styles */
+        .poly-unassigned { fill: rgba(111, 66, 193, 0.2); stroke: #6f42c1; stroke-width: 2; stroke-dasharray: 4; cursor: pointer; transition: fill 0.2s; }
+        .poly-unassigned:hover { fill: rgba(111, 66, 193, 0.5); }
+        .poly-assign-mode { cursor: crosshair; }
+        .poly-assign-mode:hover { fill: rgba(40, 167, 69, 0.5) !important; stroke: #28a745 !important; stroke-dasharray: none !important; }
+        
+        /* Colors for different types */
+        .poly-type-lm { fill: rgba(0, 123, 255, 0.3); stroke: #007bff; stroke-width: 2; }
+        .poly-type-k { fill: rgba(23, 162, 184, 0.3); stroke: #17a2b8; stroke-width: 2; }
+        .poly-type-mp { fill: rgba(253, 126, 20, 0.3); stroke: #fd7e14; stroke-width: 2; }
+        .poly-type-lu { fill: rgba(232, 62, 140, 0.3); stroke: #e83e8c; stroke-width: 2; }
+        
+        .poly-label { font-size: 14px; font-weight: bold; fill: #333; text-anchor: middle; dominant-baseline: middle; pointer-events: none; text-shadow: 1px 1px 2px white, -1px -1px 2px white, 1px -1px 2px white, -1px 1px 2px white; }
+        
+        /* Drawing */
+        .drawing-poly { fill: rgba(111, 66, 193, 0.3); stroke: #6f42c1; stroke-width: 2; stroke-dasharray: 4; }
+        .first-point { fill: #dc3545; stroke: white; stroke-width: 3; r: 8; transition: all 0.2s; cursor: pointer; }
+        .first-point.active { fill: #28a745; r: 12; stroke-width: 4; filter: drop-shadow(0 0 5px #28a745); }
+        .helper-point { fill: #6f42c1; r: 4; }
+        .edit-handle { fill: white; stroke: #dc3545; stroke-width: 3px; cursor: grab; transition: all 0.2s; }
+        .edit-handle:hover { fill: #dc3545; stroke-width: 6px; }
+        
+        /* Right Panel (Data) */
+        .right-panel { flex: 4; display: flex; flex-direction: column; background: #fff; overflow-y: auto; }
+        .summary-box { padding: 15px; background: #e3f2fd; border-bottom: 1px solid #b3e5fc; font-size: 13px; color: #0d47a1; display: flex; flex-wrap: wrap; gap: 15px; }
+        .summary-item { display: flex; flex-direction: column; }
+        .summary-val { font-size: 18px; font-weight: bold; }
+        
+        .table-toolbar { padding: 10px 15px; display: flex; gap: 10px; border-bottom: 1px solid #eee; background: #f8f9fa; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: center; }
+        .data-table th, .data-table td { padding: 8px 5px; border-bottom: 1px solid #eee; }
+        .data-table th { background: #f8f9fa; font-weight: bold; position: sticky; top: 0; color: #495057; }
+        .data-table input, .data-table select { width: 90%; padding: 4px; border: 1px solid #ccc; border-radius: 3px; font-size: 11px; text-align: center; }
+        
+        .btn-assign { background: #28a745; color: white; border: none; padding: 4px; border-radius: 3px; cursor: pointer; font-weight: normal; font-size: 11px; width: 100%; max-width: 110px; white-space: nowrap; transition: 0.2s; }
+        .btn-assign:hover { background: #218838; }
+        .btn-unassign { background: #dc3545; color: white; border: none; padding: 4px; border-radius: 3px; cursor: pointer; font-weight: normal; font-size: 11px; width: 100%; max-width: 110px; white-space: nowrap; transition: 0.2s; }
+        .btn-unassign:hover { background: #c82333; }
+        .btn-assigning { background: #ffc107; color: #333; border: none; padding: 4px; border-radius: 3px; font-weight: normal; font-size: 11px; width: 100%; max-width: 110px; white-space: nowrap; cursor: default; animation: pulse 1.5s infinite; overflow: hidden; text-overflow: ellipsis; }
+        
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        
+        .mode-indicator { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 8px 15px; border-radius: 20px; font-size: 13px; font-weight: bold; display: none; z-index: 100; pointer-events: none;}
+        
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <div class="header-brand">
+        <div class="header-icon"><img src="logo.png" alt="Logo"></div>
+        <div class="header-title">Architektura dialogu</div>
+    </div>
+    <div style="display: flex; align-items: center;">
+        <a href="/dashboard.html" class="btn-header-back">← Powrót</a>
+        <nav class="header-nav" id="header-nav"></nav>
+    </div>
+    <div class="header-user">
+        <div class="user-avatar" id="user-avatar">?</div>
+    </div>
+</header>
+
+<div class="admin-toolbar">
+    <div class="toolbar-group">
+        <label>Inwestycja</label>
+        <select id="inv-sel" onchange="loadBuildings()"></select>
+    </div>
+    <div class="toolbar-group">
+        <label>Budynek</label>
+        <div style="display:flex;gap:5px">
+            <select id="building-sel" onchange="loadFloors()"></select>
+            <button class="btn-tool" onclick="renameBuilding()" title="Edytuj nazwę">✏️ Edytuj</button>
+            <button class="btn-tool" onclick="addBuilding()" style="padding: 6px; color: green;" title="Dodaj nowy budynek">➕</button>
+            <button class="btn-tool" onclick="deleteBuilding()" style="padding: 6px; color: red;" title="Usuń budynek">🗑️</button>
+        </div>
+    </div>
+    <div class="toolbar-group">
+        <label>Piętro</label>
+        <div style="display:flex;gap:5px">
+            <select id="floor-sel" onchange="displayFloor()"></select>
+            <button class="btn-tool" onclick="renameFloor()" title="Edytuj nazwę">✏️ Edytuj</button>
+            <button class="btn-tool" onclick="addFloor()" style="padding: 6px; color: green;" title="Dodaj nowe piętro">➕</button>
+            <button class="btn-tool" onclick="deleteFloor()" style="padding: 6px; color: red;" title="Usuń piętro">🗑️</button>
+        </div>
+    </div>
+    
+    <div style="border-left: 1px solid #ccc; height: 40px; margin: 0 10px;"></div>
+    
+    <div class="toolbar-group">
+        <label>Rysunek (Tło)</label>
+        <div style="display:flex;gap:5px">
+            <button class="btn-tool" onclick="document.getElementById('replace-file').click()" title="Wgraj lub podmień rzut (JPG/PDF)">🖼️ Wgraj Rysunek</button>
+            <input type="file" id="replace-file" accept="image/jpeg, application/pdf" style="display:none" onchange="replaceFloorImage()">
+        </div>
+    </div>
+    
+    <div style="border-left: 1px solid #ccc; height: 40px; margin: 0 10px;"></div>
+    
+    <div class="toolbar-group">
+        <label>Narzędzia Obrysów</label>
+        <div style="display:flex;gap:5px">
+            <button class="btn-tool" onclick="startDrawing()" title="Dodaj nowy obrys">➕ Dodaj</button>
+            <button class="btn-tool" onclick="toggleEditMode()" title="Edytuj wierzchołki">✏️ Edytuj</button>
+            <button class="btn-tool" onclick="toggleMoveOutlineMode()" title="Przesuń cały obrys">🖐️ Przesuń</button>
+            <button class="btn-tool" onclick="toggleDeleteOutlineMode()" title="Usuń obrys">🗑️ Usuń</button>
+            <div style="border-left: 1px solid #ccc; margin: 0 5px;"></div>
+            <button class="btn-tool" onclick="copyOutlines()" title="Kopiuj obrysy na schowek">📋 Kopiuj</button>
+            <button class="btn-tool" onclick="pasteOutlines()" title="Wklej obrysy ze schowka">📋 Wklej</button>
+        </div>
+    </div>
+
+    <div class="toolbar-group" style="margin-left: auto;">
+        <label>&nbsp;</label>
+        <div style="display:flex;gap:10px">
+            <button class="btn-tool btn-save" onclick="saveDB(true)">💾 ZAPISZ ZMIANY</button>
+        </div>
+    </div>
+</div>
+
+<div class="main-workspace">
+    <div class="left-panel">
+        <div id="mode-indicator" class="mode-indicator">Tryb</div>
+        
+        <div id="drawing-toolbar" style="display:none; position:absolute; top: 10px; left: 50%; transform: translateX(-50%); background: white; padding: 8px 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 5px; z-index: 101; gap: 15px; align-items: center; border: 1px solid #ccc;">
+            <div style="display:flex; flex-direction:column; gap:3px;">
+                <label style="font-size:11px; font-weight:bold; color:#666;">Metoda rysowania:</label>
+                <select id="drawing-mode-sel" onchange="currentPoints=[]; document.getElementById('drawing-preview-element')?.remove(); render();" style="padding:4px; font-size:12px; border:1px solid #ccc; border-radius:3px; cursor:pointer;">
+                    <option value="polygon">Punkt po punkcie</option>
+                    <option value="rectangle">Prostokąt</option>
+                </select>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:3px;">
+                <label style="font-size:11px; font-weight:bold; color:#666;">Opcje:</label>
+                <label style="font-size:12px; display:flex; align-items:center; gap:5px; cursor:pointer;">
+                    <input type="checkbox" id="drawing-ortho-cb" checked> Ortogonalne (90°)
+                </label>
+            </div>
+            <div style="border-left: 1px solid #ddd; height: 30px;"></div>
+            <button class="btn-tool" onclick="cancelDrawing()" style="color:red; font-weight:bold;">Anuluj</button>
+        </div>
+        
+        <div class="map-container" id="map-cont" style="transform-origin: center center;">
+            <img id="plan-img">
+            <svg id="canvas" 
+                onclick="handleMapClick(event)" 
+                onmousemove="handleMouseMove(event)" 
+                onmousedown="handleMouseDown(event)" 
+                onmouseup="handleMouseUp(event)"
+                onmouseleave="handleMouseUp(event)"></svg>
+        </div>
+    </div>
+    
+    <div class="right-panel">
+        <div class="summary-box" id="summary-box">
+            <!-- Wypelniane przez JS -->
+        </div>
+        
+        <div class="table-toolbar">
+            <input type="file" id="import-excel" accept=".xlsx, .xls" style="display:none" onchange="handleImport(event)">
+            <button class="btn-tool" onclick="document.getElementById('import-excel').click()">📥 Import z Excel (XLSX)</button>
+            <button class="btn-tool" onclick="exportExcel()">📤 Eksport do Excela</button>
+            <button class="btn-tool" onclick="addManualRow()">➕ Dodaj wiersz</button>
+            <select id="sort-sel" onchange="render()" class="btn-tool" style="width: auto; background-color: #f8f9fa;">
+                <option value="number">Sortuj wg: Numeru</option>
+                <option value="type">Sortuj wg: Typu</option>
+                <option value="rooms">Sortuj wg: Pokoje</option>
+            </select>
+            <button class="btn-tool" id="btn-delete-selected" onclick="deleteSelectedRows()" style="display:none; color: white; background: #dc3545; border-color: #dc3545; margin-left: auto;">🗑️ Usuń zaznaczone</button>
+        </div>
+        
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 5%"><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()"></th>
+                    <th style="width: 15%">Typ</th>
+                    <th style="width: 20%">Numer</th>
+                    <th style="width: 15%">Pow. [m²]</th>
+                    <th style="width: 15%">Balkon [m²]</th>
+                    <th style="width: 10%">Pokoje</th>
+                    <th style="width: 20%">Akcja</th>
+                </tr>
+            </thead>
+            <tbody id="apt-list-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+    const pdfjsLib = window['pdfjs-dist/build/pdf'] || window.pdfjsLib;
+    if (pdfjsLib) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    let devId = null;
+    let csrfToken = '';
+    let db = { investments: {} };
+    
+    let currentFloorData = null;
+    let currentBuildingData = null;
+    let isDrawing = false;
+    let editMode = false;
+    let deleteOutlineMode = false;
+    let moveOutlineMode = false;
+    let assignModeUnitId = null;
+    let currentPoints = [];
+    let selectedRows = new Set();
+    
+    // Zoom & Pan state
+    let currentZoom = 1;
+    let panX = 0;
+    let panY = 0;
+    let isPanning = false;
+    let panStartX, panStartY;
+    
+    // Dragging state
+    let draggingPointIndex = -1;
+    let draggingOutlineId = null;
+    let movingOutlineId = null;
+    let moveStartCoords = null;
+    let movingOriginalPoints = null;
+
+    function slugify(text) { return text.toString().trim(); }
+
+    async function convertPdfToJpg(file) {
+        return new Promise((resolve, reject) => {
+            const fileReader = new FileReader();
+            fileReader.onload = function(e) {
+                const typedarray = new Uint8Array(e.target.result);
+                pdfjsLib.getDocument(typedarray).promise.then(pdf => {
+                    return pdf.getPage(1);
+                }).then(page => {
+                    const viewport = page.getViewport({ scale: 2.0 });
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    return page.render({ canvasContext: ctx, viewport: viewport }).promise.then(() => {
+                        canvas.toBlob(blob => {
+                            if(!blob) return reject(new Error("Nie udało się wygenerować obrazu"));
+                            resolve(new File([blob], file.name.replace(/\.pdf$/i, '.jpg'), { type: 'image/jpeg' }));
+                        }, 'image/jpeg', 0.9);
+                    });
+                }).catch(reject);
+            };
+            fileReader.onerror = reject;
+            fileReader.readAsArrayBuffer(file);
+        });
+    }
+
+    async function init() {
+        initHeader();
+        try {
+            const userRes = await fetch('/api/me');
+            if (!userRes.ok) { window.location.href = 'index.html'; return; }
+            const user = await userRes.json();
+            
+            const csrfRes = await fetch('/api/csrf-token');
+            if (csrfRes.ok) {
+                const csrfData = await csrfRes.json();
+                csrfToken = csrfData.csrfToken;
+            }
+
+            devId = user.devId; 
+            document.getElementById('user-avatar').textContent = (user.name || user.email || '?')[0].toUpperCase();
+            
+            const dbRes = await fetch(`/api/data/${devId}?t=${Date.now()}`);
+            if (dbRes.ok) db = await dbRes.json();
+            if (!db.investments) db.investments = {};
+
+            updateInvSelect();
+        } catch (e) { console.error(e); }
+    }
+
+    // --- NAVIGATION LOGIC ---
+    function updateInvSelect() {
+        const sel = document.getElementById('inv-sel');
+        sel.innerHTML = '<option value="">Wybierz Inwestycję</option>';
+        Object.keys(db.investments).forEach(inv => sel.innerHTML += `<option value="${inv}">${inv}</option>`);
+        loadBuildings();
+    }
+
+    function loadBuildings() {
+        const inv = document.getElementById('inv-sel').value;
+        const sel = document.getElementById('building-sel');
+        sel.innerHTML = '<option value="">Wybierz Budynek</option>';
+        if (inv && db.investments[inv]) {
+            const buildings = Object.keys(db.investments[inv]);
+            buildings.forEach(b => sel.innerHTML += `<option value="${b}">${b}</option>`);
+            if (buildings.length > 0) sel.value = buildings[0];
+        }
+        loadFloors();
+    }
+
+    function loadFloors() {
+        const inv = document.getElementById('inv-sel').value;
+        const build = document.getElementById('building-sel').value;
+        const sel = document.getElementById('floor-sel');
+        sel.innerHTML = '<option value="">Wybierz Piętro</option>';
+        if (inv && build && db.investments[inv][build]) {
+            const floors = Object.keys(db.investments[inv][build]);
+            floors.forEach(f => sel.innerHTML += `<option value="${f}">${f}</option>`);
+            if (floors.length > 0) sel.value = floors[0];
+        }
+        displayFloor();
+    }
+
+    // --- BUILDING MANAGEMENT ---
+    async function addBuilding() {
+        const inv = document.getElementById('inv-sel').value;
+        if (!inv) return alert("Wybierz inwestycję!");
+        const name = prompt("Podaj nazwę nowego budynku (np. B1):");
+        if (!name) return;
+        if (!db.investments[inv][name]) db.investments[inv][name] = {};
+        loadBuildings();
+        document.getElementById('building-sel').value = name;
+        loadFloors();
+        await saveDB();
+    }
+
+    async function renameBuilding() {
+        const inv = document.getElementById('inv-sel').value;
+        const build = document.getElementById('building-sel').value;
+        if (!build) return alert("Wybierz budynek!");
+        const newName = prompt("Podaj nową nazwę budynku:", build);
+        if (!newName || newName === build) return;
+        const res = await fetch('/api/rename-building', { method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken}, body: JSON.stringify({ devId, investId: inv, oldName: build, newName }) });
+        if (res.ok) {
+            db.investments[inv][newName] = db.investments[inv][build];
+            delete db.investments[inv][build];
+            loadBuildings();
+            document.getElementById('building-sel').value = newName;
+            loadFloors();
+            await saveDB();
+        }
+    }
+
+    async function deleteBuilding() {
+        const inv = document.getElementById('inv-sel').value;
+        const build = document.getElementById('building-sel').value;
+        if (!build) return alert("Wybierz budynek!");
+        if (confirm(`Czy na pewno usunąć budynek ${build}?`)) {
+            await fetch('/api/delete-building', { method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken}, body: JSON.stringify({ devId, investId: inv, buildingId: build }) });
+            delete db.investments[inv][build];
+            loadBuildings();
+            await saveDB();
+        }
+    }
+
+    // --- FLOOR MANAGEMENT ---
+    async function addFloor() {
+        const inv = document.getElementById('inv-sel').value;
+        const build = document.getElementById('building-sel').value;
+        if (!build) return alert("Wybierz budynek!");
+        const name = prompt("Podaj nazwę nowego piętra (np. Parter):");
+        if (!name) return;
+        if (!db.investments[inv][build][name]) {
+            db.investments[inv][build][name] = { apartments: [], outlines: [], mapImage: null };
+        }
+        loadFloors();
+        document.getElementById('floor-sel').value = name;
+        displayFloor();
+        await saveDB();
+    }
+
+    async function renameFloor() {
+        const inv = document.getElementById('inv-sel').value;
+        const build = document.getElementById('building-sel').value;
+        const floor = document.getElementById('floor-sel').value;
+        if (!floor) return alert("Wybierz piętro!");
+        const newName = prompt("Podaj nową nazwę piętra:", floor);
+        if (!newName || newName === floor) return;
+        const res = await fetch('/api/rename-floor', { method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken}, body: JSON.stringify({ devId, investId: inv, buildingId: build, oldName: floor, newName }) });
+        if (res.ok) {
+            db.investments[inv][build][newName] = db.investments[inv][build][floor];
+            delete db.investments[inv][build][floor];
+            loadFloors();
+            document.getElementById('floor-sel').value = newName;
+            displayFloor();
+            await saveDB();
+        }
+    }
+
+    async function deleteFloor() {
+        const inv = document.getElementById('inv-sel').value;
+        const build = document.getElementById('building-sel').value;
+        const floor = document.getElementById('floor-sel').value;
+        if (!floor) return alert("Wybierz piętro!");
+        if (confirm(`Czy na pewno usunąć piętro ${floor}?`)) {
+            await fetch('/api/delete-floor', { method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken}, body: JSON.stringify({ devId, investId: inv, buildingId: build, floorName: floor }) });
+            delete db.investments[inv][build][floor];
+            loadFloors();
+            await saveDB();
+        }
+    }
+
+    async function replaceFloorImage() {
+        const fileInput = document.getElementById('replace-file');
+        const file = fileInput.files[0];
+        if (!file) return;
+        let finalFile = file;
+        if (file.type === 'application/pdf') {
+            try { finalFile = await convertPdfToJpg(file); } 
+            catch(e) { alert("Błąd konwersji PDF"); return; }
+        }
+        
+        const inv = document.getElementById('inv-sel').value;
+        const build = document.getElementById('building-sel').value;
+        const floor = document.getElementById('floor-sel').value;
+        if (!floor) return alert("Wybierz piętro przed wgraniem!");
+        
+        const formData = new FormData();
+        formData.append('devId', devId);
+        formData.append('investId', inv);
+        formData.append('buildingId', build);
+        formData.append('floorName', floor);
+        formData.append('type', 'floorPlan');
+        formData.append('floorImage', finalFile);
+        
+        try {
+            const res = await fetch('/api/upload-floor', { method: 'POST', headers: {'X-CSRF-Token': csrfToken}, body: formData });
+            if (res.ok) {
+                alert("Rzut został podmieniony!");
+                displayFloor();
+            } else {
+                alert("Błąd podczas wgrywania pliku.");
+            }
+        } catch (e) { alert("Błąd przesyłania."); }
+        fileInput.value = '';
+    }
+
+    function copyOutlines() {
+        if (!currentFloorData || !currentFloorData.outlines) return alert("Brak obrysów do skopiowania.");
+        localStorage.setItem('copiedOutlines', JSON.stringify(currentFloorData.outlines));
+        alert("Skopiowano obrysy. Przejdź na inne piętro i kliknij Wklej obrysy.");
+    }
+
+    function pasteOutlines() {
+        if (!currentFloorData) return alert("Wybierz piętro docelowe.");
+        const copied = localStorage.getItem('copiedOutlines');
+        if (!copied) return alert("Schowek jest pusty.");
+        const parsed = JSON.parse(copied);
+        const newOutlines = parsed.map(o => ({ id: 'o_' + Date.now() + Math.floor(Math.random()*10000), points: o.points }));
+        if (!currentFloorData.outlines) currentFloorData.outlines = [];
+        currentFloorData.outlines.push(...newOutlines);
+        render();
+        alert(`Wklejono ${newOutlines.length} obrysów.`);
+    }
+
+    // --- MAIN RENDER ---
+    function displayFloor() {
+        const inv = document.getElementById('inv-sel').value;
+        const build = document.getElementById('building-sel').value;
+        const floor = document.getElementById('floor-sel').value;
+        
+        assignModeUnitId = null;
+        setModeIndicator("");
+
+        if (inv && build && db.investments[inv][build]) {
+            currentBuildingData = db.investments[inv][build];
+        } else {
+            currentBuildingData = null;
+        }
+
+        if (inv && build && floor && db.investments[inv][build][floor]) {
+            currentFloorData = db.investments[inv][build][floor];
+            
+            if (!currentFloorData.outlines) currentFloorData.outlines = [];
+            if (!currentFloorData.apartments) currentFloorData.apartments = [];
+            
+            currentFloorData.apartments.forEach(apt => {
+                if (apt.points && !apt.outlineId) {
+                    const oId = 'o_' + Date.now() + Math.floor(Math.random()*10000);
+                    currentFloorData.outlines.push({ id: oId, points: apt.points });
+                    apt.outlineId = oId;
+                }
+            });
+
+            const img = document.getElementById('plan-img');
+            const cont = document.getElementById('map-cont');
+            
+            currentZoom = 1;
+            panX = 0;
+            panY = 0;
+            updateMapTransform();
+            
+            img.src = `/uploads/${devId}/${inv}/${build}/plans/${floor}.jpg?t=${Date.now()}`;
+            img.onerror = () => { cont.style.display = 'block'; render(); };
+            img.onload = () => { 
+                cont.style.display = 'block'; 
+                document.getElementById('canvas').setAttribute("viewBox", `0 0 ${img.naturalWidth} ${img.naturalHeight}`);
+                render(); 
+            };
+        } else {
+            currentFloorData = null;
+            document.getElementById('map-cont').style.display = 'none';
+            document.getElementById('apt-list-body').innerHTML = '';
+            document.getElementById('summary-box').innerHTML = '';
+        }
+    }
+
+    function render() {
+        if (!currentBuildingData) return;
+        if (currentFloorData) renderSvg();
+        renderTable();
+        renderSummary();
+    }
+
+    function renderSummary() {
+        let countLM = 0, areaLM = 0, countK = 0, countMP = 0, countLU = 0;
+        let allUnits = [];
+        if (currentBuildingData) {
+            Object.keys(currentBuildingData).forEach(fName => {
+                if (currentBuildingData[fName].apartments) {
+                    currentBuildingData[fName].apartments.forEach(a => allUnits.push(a));
+                }
+            });
+        }
+
+        allUnits.forEach(a => {
+            const t = (a.type || 'LM').toUpperCase();
+            const area = parseFloat((a.area || '0').toString().replace(',', '.')) || 0;
+            if (t === 'LM') { countLM++; areaLM += area; }
+            else if (t === 'K') countK++;
+            else if (t === 'MP') countMP++;
+            else if (t === 'LU') countLU++;
+        });
+        
+        document.getElementById('summary-box').innerHTML = `
+            <div class="summary-item"><span style="font-size:11px;color:#546e7a;">Mieszkania (LM)</span><span class="summary-val">${countLM}</span></div>
+            <div class="summary-item"><span style="font-size:11px;color:#546e7a;">Pow. Mieszkań</span><span class="summary-val">${areaLM.toFixed(2)} m²</span></div>
+            <div class="summary-item"><span style="font-size:11px;color:#546e7a;">Komórki (K)</span><span class="summary-val">${countK}</span></div>
+            <div class="summary-item"><span style="font-size:11px;color:#546e7a;">Postoje (MP)</span><span class="summary-val">${countMP}</span></div>
+            <div class="summary-item"><span style="font-size:11px;color:#546e7a;">Usługowe (LU)</span><span class="summary-val">${countLU}</span></div>
+        `;
+    }
+
+    // --- SVG DRAWING & RENDERING ---
+    function renderSvg() {
+        const svg = document.getElementById('canvas');
+        svg.innerHTML = '';
+        if (!currentFloorData) return;
+
+        currentFloorData.outlines.forEach(out => {
+            const assignedUnit = currentFloorData.apartments.find(a => a.outlineId === out.id);
+            const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+            poly.setAttribute("points", out.points);
+            poly.dataset.id = out.id;
+            
+            if (assignedUnit) {
+                const t = (assignedUnit.type || 'LM').toLowerCase();
+                poly.setAttribute("class", `poly-assigned poly-type-${t}`);
+            } else {
+                poly.setAttribute("class", "poly-unassigned");
+                if (assignModeUnitId) {
+                    poly.classList.add("poly-assign-mode");
+                    poly.onclick = (e) => { e.stopPropagation(); assignOutline(out.id); };
+                }
+            }
+
+            if (deleteOutlineMode) {
+                poly.onclick = (e) => { e.stopPropagation(); deleteOutline(out.id); };
+                poly.style.fill = "rgba(220, 53, 69, 0.5)";
+                poly.style.stroke = "#dc3545";
+            }
+
+            svg.appendChild(poly);
+
+            if (assignedUnit && !editMode && !deleteOutlineMode && !moveOutlineMode) {
+                const pts = out.points.split(' ').map(p => p.split(',').map(Number));
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                pts.forEach(p => {
+                    if (p[0] < minX) minX = p[0]; if (p[0] > maxX) maxX = p[0];
+                    if (p[1] < minY) minY = p[1]; if (p[1] > maxY) maxY = p[1];
+                });
+                const cx = (minX + maxX) / 2;
+                const cy = (minY + maxY) / 2;
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", cx);
+                text.setAttribute("y", cy);
+                text.setAttribute("class", "poly-label");
+                text.textContent = assignedUnit.number;
+                svg.appendChild(text);
+            }
+
+            if (editMode) {
+                const pts = out.points.split(' ');
+                pts.forEach((pStr, idx) => {
+                    const [px, py] = pStr.split(',').map(Number);
+                    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                    circle.setAttribute("cx", px);
+                    circle.setAttribute("cy", py);
+                    circle.setAttribute("r", 5 / currentZoom);
+                    circle.setAttribute("class", "edit-handle");
+                    circle.onmousedown = (e) => {
+                        e.stopPropagation();
+                        draggingPointIndex = idx;
+                        draggingOutlineId = out.id;
+                    };
+                    svg.appendChild(circle);
+                });
+            }
+
+            if (moveOutlineMode) {
+                poly.style.cursor = 'move';
+                poly.onmousedown = (e) => {
+                    e.stopPropagation();
+                    movingOutlineId = out.id;
+                    const svg = document.getElementById('canvas');
+                    const pt = svg.createSVGPoint();
+                    pt.x = e.clientX; pt.y = e.clientY;
+                    moveStartCoords = pt.matrixTransform(svg.getScreenCTM().inverse());
+                    movingOriginalPoints = out.points.trim().split(' ').map(p => p.split(',').map(Number));
+                };
+            }
+        });
+
+        if (currentPoints.length > 0) {
+            const tempPoly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+            tempPoly.setAttribute("points", currentPoints.map(p => `${p.x},${p.y}`).join(' '));
+            tempPoly.setAttribute("class", "drawing-poly"); 
+            svg.appendChild(tempPoly);
+            
+            currentPoints.forEach((p, idx) => {
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("cx", p.x); circle.setAttribute("cy", p.y);
+                if(idx === 0) { 
+                    circle.setAttribute("class", "first-point"); 
+                    circle.setAttribute("id", "first-dot"); 
+                } else { 
+                    circle.setAttribute("class", "helper-point"); 
+                }
+                svg.appendChild(circle);
+            });
+        }
+    }
+
+    function startDrawing() {
+        if (!currentFloorData) return alert("Wybierz piętro!");
+        if (isDrawing) {
+            cancelDrawing();
+            return;
+        }
+        isDrawing = true; editMode = false; deleteOutlineMode = false; moveOutlineMode = false; assignModeUnitId = null;
+        currentPoints = [];
+        setModeIndicator("Tryb: Dodawanie obrysu");
+        document.getElementById('drawing-toolbar').style.display = 'flex';
+        render();
+    }
+
+    function toggleEditMode() {
+        if (!currentFloorData) return;
+        editMode = !editMode; isDrawing = false; deleteOutlineMode = false; moveOutlineMode = false; assignModeUnitId = null;
+        setModeIndicator(editMode ? "Tryb: Edycja wierzchołków (przeciągnij punkty obrysu)" : "");
+        document.getElementById('drawing-toolbar').style.display = 'none';
+        render();
+    }
+
+    function toggleMoveOutlineMode() {
+        if (!currentFloorData) return;
+        moveOutlineMode = !moveOutlineMode; isDrawing = false; editMode = false; deleteOutlineMode = false; assignModeUnitId = null;
+        setModeIndicator(moveOutlineMode ? "Tryb: Przesuwanie obrysu (chwyć i przeciągnij obrys)" : "");
+        document.getElementById('drawing-toolbar').style.display = 'none';
+        render();
+    }
+
+    function toggleDeleteOutlineMode() {
+        if (!currentFloorData) return;
+        deleteOutlineMode = !deleteOutlineMode; isDrawing = false; editMode = false; moveOutlineMode = false; assignModeUnitId = null;
+        setModeIndicator(deleteOutlineMode ? "Tryb: Usuwanie obrysu (kliknij obrys aby usunąć)" : "");
+        document.getElementById('drawing-toolbar').style.display = 'none';
+        render();
+    }
+
+    function setModeIndicator(text) {
+        const ind = document.getElementById('mode-indicator');
+        if (text) { ind.style.display = 'block'; ind.textContent = text; }
+        else { ind.style.display = 'none'; }
+    }
+
+    function cancelDrawing() {
+        isDrawing = false;
+        currentPoints = [];
+        setModeIndicator("");
+        const preview = document.getElementById('drawing-preview-element');
+        if (preview) preview.remove();
+        document.getElementById('drawing-toolbar').style.display = 'none';
+        render();
+    }
+
+    function handleMouseMove(e) {
+        const svg = document.getElementById('canvas');
+        const pt = svg.createSVGPoint();
+        pt.x = e.clientX; pt.y = e.clientY;
+        const coords = pt.matrixTransform(svg.getScreenCTM().inverse());
+
+        // Handling dragging
+        if (draggingPointIndex > -1 && draggingOutlineId) {
+            updateOutlinePoint(draggingOutlineId, draggingPointIndex, Math.round(coords.x), Math.round(coords.y));
+            return;
+        }
+
+        // Handling moving entire outline
+        if (movingOutlineId && moveStartCoords && movingOriginalPoints) {
+            let dx = coords.x - moveStartCoords.x;
+            let dy = coords.y - moveStartCoords.y;
+            
+            const out = currentFloorData.outlines.find(o => o.id === movingOutlineId);
+            if (out) {
+                out.points = movingOriginalPoints.map(p => `${Math.round(p[0] + dx)},${Math.round(p[1] + dy)}`).join(' ');
+                const linkedApt = currentFloorData.apartments.find(a => a.outlineId === movingOutlineId);
+                if (linkedApt) linkedApt.points = out.points;
+                renderSvg();
+            }
+            return;
+        }
+
+        // Handling drawing preview
+        if (!isDrawing) return;
+        
+        let cx = Math.round(coords.x);
+        let cy = Math.round(coords.y);
+        
+        const orthoChecked = document.getElementById('drawing-ortho-cb') ? document.getElementById('drawing-ortho-cb').checked : false;
+        
+        if (currentPoints.length > 0 && orthoChecked) {
+            const last = currentPoints[currentPoints.length - 1];
+            if (Math.abs(cx - last.x) > Math.abs(cy - last.y)) cy = last.y;
+            else cx = last.x;
+        }
+
+        let preview = document.getElementById('drawing-preview-element');
+        const drawingMode = document.getElementById('drawing-mode-sel') ? document.getElementById('drawing-mode-sel').value : 'polygon';
+
+        if (!preview) {
+            if (drawingMode === 'rectangle') {
+                preview = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            } else {
+                preview = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            }
+            preview.setAttribute('id', 'drawing-preview-element');
+            preview.setAttribute('stroke', '#6f42c1');
+            preview.setAttribute('stroke-width', '2');
+            preview.setAttribute('stroke-dasharray', '4');
+            preview.setAttribute('fill', 'rgba(111,66,193,0.2)');
+            svg.appendChild(preview);
+        }
+
+        if (currentPoints.length > 0) {
+            const first = currentPoints[0];
+            if (drawingMode === 'rectangle') {
+                preview.setAttribute('x', Math.min(first.x, cx));
+                preview.setAttribute('y', Math.min(first.y, cy));
+                preview.setAttribute('width', Math.abs(cx - first.x));
+                preview.setAttribute('height', Math.abs(cy - first.y));
+            } else {
+                const last = currentPoints[currentPoints.length - 1];
+                preview.setAttribute('x1', last.x);
+                preview.setAttribute('y1', last.y);
+                preview.setAttribute('x2', cx);
+                preview.setAttribute('y2', cy);
+            }
+        } else {
+            // hide preview if no points
+            if(drawingMode === 'rectangle'){
+                preview.setAttribute('width', 0); preview.setAttribute('height', 0);
+            } else {
+                preview.setAttribute('x1', 0); preview.setAttribute('y1', 0); preview.setAttribute('x2', 0); preview.setAttribute('y2', 0);
+            }
+        }
+
+        if (currentPoints.length >= 3 && drawingMode === 'polygon') {
+            const first = currentPoints[0];
+            const dist = Math.sqrt(Math.pow(first.x - cx, 2) + Math.pow(first.y - cy, 2));
+            const firstDot = document.getElementById('first-dot');
+            if (firstDot) dist < 40 ? firstDot.classList.add('active') : firstDot.classList.remove('active');
+        }
+    }
+
+    function handleMouseDown(e) {
+        if (!isDrawing) return;
+        const drawingMode = document.getElementById('drawing-mode-sel') ? document.getElementById('drawing-mode-sel').value : 'polygon';
+        if (drawingMode === 'rectangle') {
+            const svg = document.getElementById('canvas'), pt = svg.createSVGPoint();
+            pt.x = e.clientX; pt.y = e.clientY;
+            const coords = pt.matrixTransform(svg.getScreenCTM().inverse());
+            currentPoints = [{x: Math.round(coords.x), y: Math.round(coords.y)}];
+        }
+    }
+    
+    function handleMouseUp(e) {
+        draggingPointIndex = -1;
+        draggingOutlineId = null;
+
+        if (movingOutlineId) {
+            movingOutlineId = null;
+            moveStartCoords = null;
+            movingOriginalPoints = null;
+            saveDB();
+            return;
+        }
+
+        if (!isDrawing) return;
+        const drawingMode = document.getElementById('drawing-mode-sel') ? document.getElementById('drawing-mode-sel').value : 'polygon';
+        if (drawingMode === 'rectangle' && currentPoints.length > 0) {
+            const svg = document.getElementById('canvas'), pt = svg.createSVGPoint();
+            pt.x = e.clientX; pt.y = e.clientY;
+            const coords = pt.matrixTransform(svg.getScreenCTM().inverse());
+            let cx = Math.round(coords.x);
+            let cy = Math.round(coords.y);
+            
+            const first = currentPoints[0];
+            
+            if (Math.abs(cx - first.x) > 5 && Math.abs(cy - first.y) > 5) {
+                const pts = [
+                    {x: first.x, y: first.y},
+                    {x: cx, y: first.y},
+                    {x: cx, y: cy},
+                    {x: first.x, y: cy}
+                ];
+                const oId = 'o_' + Date.now();
+                currentFloorData.outlines.push({ id: oId, points: pts.map(p => `${p.x},${p.y}`).join(' ') });
+                
+                currentPoints = [];
+                const preview = document.getElementById('drawing-preview-element');
+                if (preview) preview.remove();
+                
+                saveDB();
+                render();
+            } else {
+                currentPoints = [];
+                const preview = document.getElementById('drawing-preview-element');
+                if (preview) preview.remove();
+                render();
+            }
+        }
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            isDrawing = false; editMode = false; deleteOutlineMode = false; moveOutlineMode = false; assignModeUnitId = null;
+            currentPoints = [];
+            setModeIndicator("");
+            const preview = document.getElementById('drawing-preview-element');
+            if (preview) preview.remove();
+            document.getElementById('drawing-toolbar').style.display = 'none';
+            render();
+        }
+    });
+
+    function handleMapClick(e) {
+        if(!isDrawing) return;
+        const svg = document.getElementById('canvas'), pt = svg.createSVGPoint();
+        pt.x = e.clientX; pt.y = e.clientY;
+        const coords = pt.matrixTransform(svg.getScreenCTM().inverse());
+        
+        let cx = Math.round(coords.x);
+        let cy = Math.round(coords.y);
+        
+        const orthoChecked = document.getElementById('drawing-ortho-cb') ? document.getElementById('drawing-ortho-cb').checked : false;
+        
+        if (currentPoints.length > 0 && orthoChecked) {
+            const last = currentPoints[currentPoints.length - 1];
+            if (Math.abs(cx - last.x) > Math.abs(cy - last.y)) cy = last.y;
+            else cx = last.x;
+        }
+
+        const drawingMode = document.getElementById('drawing-mode-sel') ? document.getElementById('drawing-mode-sel').value : 'polygon';
+
+        if (drawingMode === 'rectangle') {
+            return; // Handled by drag (mousedown/mouseup)
+        }
+
+        if (currentPoints.length >= 3) {
+            const first = currentPoints[0];
+            const dist = Math.sqrt(Math.pow(first.x - cx, 2) + Math.pow(first.y - cy, 2));
+            if (dist < 40) { 
+                const oId = 'o_' + Date.now();
+                currentFloorData.outlines.push({ id: oId, points: currentPoints.map(p => `${p.x},${p.y}`).join(' ') });
+                
+                currentPoints = [];
+                const preview = document.getElementById('drawing-preview-element');
+                if (preview) preview.remove();
+                
+                saveDB();
+                render();
+                return;
+            }
+        }
+        currentPoints.push({x: cx, y: cy});
+        render();
+    }
+
+    // --- ZOOM AND PAN LOGIC ---
+    function updateMapTransform() {
+        const cont = document.getElementById('map-cont');
+        if (cont) {
+            cont.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+            cont.style.transformOrigin = `center center`;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const leftPanel = document.querySelector('.left-panel');
+        if (!leftPanel) return;
+
+        leftPanel.addEventListener('wheel', function(e) {
+            if (!currentFloorData) return;
+            e.preventDefault();
+            const zoomDelta = e.deltaY > 0 ? -0.1 : 0.1;
+            let newZoom = currentZoom + zoomDelta;
+            newZoom = Math.min(Math.max(newZoom, 0.2), 5); // Limit 0.2x to 5x
+            
+            if (newZoom !== currentZoom) {
+                const rect = leftPanel.getBoundingClientRect();
+                const mx = e.clientX - rect.left - rect.width / 2;
+                const my = e.clientY - rect.top - rect.height / 2;
+                
+                panX = mx - (mx - panX) * (newZoom / currentZoom);
+                panY = my - (my - panY) * (newZoom / currentZoom);
+                currentZoom = newZoom;
+                updateMapTransform();
+            }
+        }, { passive: false });
+
+        leftPanel.addEventListener('mousedown', function(e) {
+            if (!currentFloorData) return;
+            if (e.button === 1 || (e.button === 0 && e.ctrlKey)) { // Middle mouse or Ctrl+Left Click to pan
+                isPanning = true;
+                startPanX = e.clientX - panX;
+                startPanY = e.clientY - panY;
+                leftPanel.style.cursor = 'grabbing';
+                e.preventDefault();
+            }
+        });
+
+        window.addEventListener('mousemove', function(e) {
+            if (!isPanning) return;
+            panX = e.clientX - startPanX;
+            panY = e.clientY - startPanY;
+            updateMapTransform();
+        });
+
+        window.addEventListener('mouseup', function(e) {
+            if (isPanning) {
+                isPanning = false;
+                document.querySelector('.left-panel').style.cursor = 'default';
+            }
+        });
+    });
+
+    function handleMapClick(e) {
+        if(!isDrawing) return;
+        const svg = document.getElementById('canvas'), pt = svg.createSVGPoint();
+        pt.x = e.clientX; pt.y = e.clientY;
+        const coords = pt.matrixTransform(svg.getScreenCTM().inverse());
+        
+        if (currentPoints.length >= 3) {
+            const first = currentPoints[0];
+            const dist = Math.sqrt(Math.pow(first.x - coords.x, 2) + Math.pow(first.y - coords.y, 2));
+            if (dist < 40) { 
+                const oId = 'o_' + Date.now();
+                currentFloorData.outlines.push({ id: oId, points: currentPoints.map(p => `${p.x},${p.y}`).join(' ') });
+                isDrawing = false; currentPoints = [];
+                setModeIndicator("");
+                render(); 
+                return;
+            }
+        }
+        currentPoints.push({x: Math.round(coords.x), y: Math.round(coords.y)});
+        render();
+    }
+
+    function updateOutlinePoint(outlineId, pointIndex, newX, newY) {
+        const out = currentFloorData.outlines.find(o => o.id === outlineId);
+        if (!out) return;
+        let pts = out.points.trim().split(' ').map(p => p.split(',').map(Number));
+        pts[pointIndex] = [newX, newY];
+        out.points = pts.map(p => p.join(',')).join(' ');
+        
+        // Sync with assigned unit if exists
+        const linkedApt = currentFloorData.apartments.find(a => a.outlineId === outlineId);
+        if (linkedApt) linkedApt.points = out.points;
+        renderSvg();
+    }
+
+    function deleteOutline(outlineId) {
+        if(confirm("Usunąć ten obrys?")) {
+            currentFloorData.outlines = currentFloorData.outlines.filter(o => o.id !== outlineId);
+            const linkedApt = currentFloorData.apartments.find(a => a.outlineId === outlineId);
+            if (linkedApt) {
+                linkedApt.outlineId = null;
+                linkedApt.points = null;
+            }
+            render();
+        }
+    }
+
+    // --- TABLE DATA ---
+    function renderTable() {
+        if (!currentBuildingData) return;
+        const tbody = document.getElementById('apt-list-body');
+        tbody.innerHTML = '';
+        
+        const selectAllCb = document.getElementById('selectAllCheckbox');
+        if (selectAllCb) selectAllCb.checked = false;
+        
+        let allUnits = [];
+        Object.keys(currentBuildingData).forEach(fName => {
+            if (currentBuildingData[fName].apartments) {
+                currentBuildingData[fName].apartments.forEach((apt, idx) => {
+                    allUnits.push({ apt, floorName: fName, aptIndex: idx });
+                });
+            }
+        });
+        
+        const sortMode = document.getElementById('sort-sel') ? document.getElementById('sort-sel').value : 'number';
+
+        allUnits.sort((a,b) => {
+            const isAssignedA = !!a.apt.outlineId;
+            const isAssignedB = !!b.apt.outlineId;
+
+            if (isAssignedA !== isAssignedB) {
+                return isAssignedA ? 1 : -1;
+            }
+
+            const numA = String(a.apt.number || '');
+            const numB = String(b.apt.number || '');
+
+            if (sortMode === 'type') {
+                const typeA = String(a.apt.type || '');
+                const typeB = String(b.apt.type || '');
+                const typeCmp = typeA.localeCompare(typeB);
+                if (typeCmp !== 0) return typeCmp;
+                return numA.localeCompare(numB, undefined, {numeric: true});
+            } else if (sortMode === 'rooms') {
+                const rA = String(a.apt.rooms || '');
+                const rB = String(b.apt.rooms || '');
+                const roomCmp = rA.localeCompare(rB, undefined, {numeric: true});
+                if (roomCmp !== 0) return roomCmp;
+                return numA.localeCompare(numB, undefined, {numeric: true});
+            } else {
+                return numA.localeCompare(numB, undefined, {numeric: true});
+            }
+        });
+
+        allUnits.forEach((unitObj) => {
+            const apt = unitObj.apt;
+            const fName = unitObj.floorName;
+            const i = unitObj.aptIndex;
+            
+            const isAssigned = !!apt.outlineId;
+            let actionHtml = '';
+            
+            if (assignModeUnitId === apt.id) {
+                actionHtml = `<button class="btn-assigning" onclick="cancelAssign()">Wybierz obrys na mapie...</button>`;
+            } else if (isAssigned) {
+                // If it's assigned, indicate which floor it's on if not current
+                const currentFloorName = document.getElementById('floor-sel').value;
+                if (fName !== currentFloorName) {
+                    actionHtml = `<div style="font-size:10px; color:#666; margin-bottom:2px">Związane z: ${fName}</div>
+                    <button class="btn-unassign" onclick="unassignUnit('${apt.id}', '${fName}')">Usuń przypisanie</button>`;
+                } else {
+                    actionHtml = `<button class="btn-unassign" onclick="unassignUnit('${apt.id}', '${fName}')">Usuń przypisanie</button>`;
+                }
+            } else {
+                actionHtml = `<button class="btn-assign" onclick="startAssign('${apt.id}')">Przypisz obrys</button>`;
+            }
+
+            tbody.innerHTML += `<tr>
+                <td><input type="checkbox" class="row-checkbox" value="${apt.id}" onchange="toggleRowSelection('${apt.id}')" ${selectedRows.has(apt.id) ? 'checked' : ''}></td>
+                <td><select value="${apt.type || '-'}" onchange="updateApt('${fName}', ${i}, 'type', this.value)">
+                    <option value="LM" ${apt.type==='LM'?'selected':''}>Lokal mieszkalny</option>
+                    <option value="LU" ${apt.type==='LU'?'selected':''}>Lokal usługowy</option>
+                    <option value="K" ${apt.type==='K'?'selected':''}>Komórka</option>
+                    <option value="MP" ${apt.type==='MP'?'selected':''}>Miejsce postojowe</option>
+                    <option value="-" ${apt.type==='-'?'selected':''}>-</option>
+                </select></td>
+                <td><input type="text" value="${apt.number || ''}" onchange="updateApt('${fName}', ${i}, 'number', this.value)"></td>
+                <td><input type="text" value="${apt.area || ''}" onchange="updateApt('${fName}', ${i}, 'area', this.value)"></td>
+                <td><input type="text" value="${apt.balconyArea || ''}" onchange="updateApt('${fName}', ${i}, 'balconyArea', this.value)"></td>
+                <td><input type="text" value="${apt.rooms || ''}" onchange="updateApt('${fName}', ${i}, 'rooms', this.value)"></td>
+                <td>${actionHtml}</td>
+            </tr>`;
+        });
+        
+        updateDeleteButtonVisibility();
+    }
+
+    function updateApt(floorName, idx, field, val) {
+        currentBuildingData[floorName].apartments[idx][field] = val;
+        renderSummary();
+    }
+
+    function deleteRow(floorName, idx) {
+        if(confirm("Czy na pewno usunąć ten wiersz?")) {
+            currentBuildingData[floorName].apartments.splice(idx, 1);
+            render();
+        }
+    }
+
+    function addManualRow() {
+        if(!currentFloorData) return alert("Wybierz piętro przed dodaniem wiersza.");
+        currentFloorData.apartments.push({
+            id: 'a_' + Date.now(),
+            type: 'LM',
+            number: '',
+            area: '',
+            balconyArea: '',
+            rooms: '',
+            outlineId: null,
+            points: null,
+            status: 'wolne'
+        });
+        render();
+    }
+
+    // --- ASSIGNMENT LOGIC ---
+    function startAssign(aptId) {
+        isDrawing = false; editMode = false; deleteOutlineMode = false;
+        assignModeUnitId = aptId;
+        setModeIndicator("Tryb przypisywania: Kliknij podświetlony na różowo obrys na rzucie po lewej.");
+        render();
+    }
+
+    function cancelAssign() {
+        assignModeUnitId = null;
+        setModeIndicator("");
+        render();
+    }
+
+    function assignOutline(outlineId) {
+        if (!assignModeUnitId) return;
+        
+        let targetUnit = null;
+        let oldFloorName = null;
+        
+        // Find the unit across all floors in the building
+        Object.keys(currentBuildingData).forEach(fName => {
+            const found = currentBuildingData[fName].apartments?.find(a => a.id === assignModeUnitId);
+            if (found) {
+                targetUnit = found;
+                oldFloorName = fName;
+            }
+        });
+
+        const out = currentFloorData.outlines.find(o => o.id === outlineId);
+        
+        if (targetUnit && out) {
+            const currentFloorName = document.getElementById('floor-sel').value;
+            
+            // If unit is on a different floor, MOVE it to the current floor!
+            if (oldFloorName && oldFloorName !== currentFloorName) {
+                currentBuildingData[oldFloorName].apartments = currentBuildingData[oldFloorName].apartments.filter(a => a.id !== targetUnit.id);
+                currentFloorData.apartments.push(targetUnit);
+            }
+            
+            targetUnit.outlineId = outlineId;
+            targetUnit.points = out.points; // Sync
+        }
+        assignModeUnitId = null;
+        setModeIndicator("");
+        render();
+    }
+
+    function unassignUnit(aptId, floorName) {
+        if (!currentBuildingData[floorName]) return;
+        const apt = currentBuildingData[floorName].apartments.find(a => a.id === aptId);
+        if (apt) {
+            apt.outlineId = null;
+            apt.points = null; // Remove backward compatibility points
+        }
+        render();
+    }
+
+    // --- EXCEL IMPORT/EXPORT ---
+    function handleImport(event) {
+        if (!currentBuildingData) return alert("Wybierz budynek!");
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet);
+            
+            let added = 0;
+            json.forEach(row => {
+                const rowNum = String(row['Numer'] || '').trim();
+                const rowTypRaw = String(row['Typ'] || '').trim().toLowerCase();
+                if(rowNum === 'np. M1' || (!rowNum && !rowTypRaw)) return; // skip template example row
+                
+                let internalTyp = '-';
+                if (rowTypRaw === 'lokal mieszkalny' || rowTypRaw === 'lm') internalTyp = 'LM';
+                else if (rowTypRaw === 'lokal usługowy' || rowTypRaw === 'lu') internalTyp = 'LU';
+                else if (rowTypRaw === 'komórka' || rowTypRaw === 'k') internalTyp = 'K';
+                else if (rowTypRaw === 'miejsce postojowe' || rowTypRaw === 'mp') internalTyp = 'MP';
+                
+                if (!currentFloorData) return;
+                if (!currentFloorData.apartments) currentFloorData.apartments = [];
+                
+                currentFloorData.apartments.push({
+                    id: 'a_' + Date.now() + Math.random(),
+                    type: internalTyp,
+                    number: rowNum,
+                    area: String(row['Powierzchnia'] || ''),
+                    balconyArea: String(row['Balkon'] || ''),
+                    rooms: String(row['Pokoje'] || ''),
+                    outlineId: null,
+                    points: null,
+                    status: 'wolne'
+                });
+                added++;
+            });
+            alert(`Zaimportowano ${added} wierszy.`);
+            render();
+            event.target.value = '';
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function exportExcel() {
+        if (!currentBuildingData) return alert("Wybierz budynek!");
+        
+        const typeMap = {
+            'LM': 'Lokal mieszkalny',
+            'LU': 'Lokal usługowy',
+            'K': 'Komórka',
+            'MP': 'Miejsce postojowe',
+            '-': '-'
+        };
+        
+        let data = [];
+        Object.keys(currentBuildingData).forEach(fName => {
+            if (currentBuildingData[fName].apartments) {
+                currentBuildingData[fName].apartments.forEach(apt => {
+                    data.push({
+                        'Typ': typeMap[apt.type] || '-',
+                        'Numer': apt.number || '',
+                        'Powierzchnia': apt.area || '',
+                        'Balkon': apt.balconyArea || '',
+                        'Pokoje': apt.rooms || ''
+                    });
+                });
+            }
+        });
+        
+        if (data.length === 0) {
+            data.push({
+                'Typ': 'Lokal mieszkalny',
+                'Numer': 'np. M1',
+                'Powierzchnia': 'np. 50.5',
+                'Balkon': 'np. 10',
+                'Pokoje': 'np. 3'
+            });
+        }
+
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Zasoby");
+        const inv = document.getElementById('inv-sel').value;
+        const build = document.getElementById('building-sel').value;
+        XLSX.writeFile(wb, `Zasoby_${inv}_${build}.xlsx`);
+    }
+
+    // --- MULTI-SELECT & DELETE ---
+    function toggleSelectAll() {
+        const checked = document.getElementById('selectAllCheckbox').checked;
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = checked;
+            if (checked) selectedRows.add(cb.value);
+            else selectedRows.delete(cb.value);
+        });
+        updateDeleteButtonVisibility();
+    }
+
+    function toggleRowSelection(id) {
+        if (selectedRows.has(id)) selectedRows.delete(id);
+        else selectedRows.add(id);
+        
+        const allCheckboxes = document.querySelectorAll('.row-checkbox');
+        const checkedCount = document.querySelectorAll('.row-checkbox:checked').length;
+        const selectAllCb = document.getElementById('selectAllCheckbox');
+        
+        if (checkedCount === 0) selectAllCb.checked = false;
+        else if (checkedCount === allCheckboxes.length && allCheckboxes.length > 0) selectAllCb.checked = true;
+        else selectAllCb.checked = false;
+        
+        updateDeleteButtonVisibility();
+    }
+
+    function updateDeleteButtonVisibility() {
+        const btn = document.getElementById('btn-delete-selected');
+        if (selectedRows.size > 0) btn.style.display = 'block';
+        else btn.style.display = 'none';
+    }
+
+    function deleteSelectedRows() {
+        if (selectedRows.size === 0) return;
+        if (!confirm(`Czy na pewno chcesz usunąć zaznaczone wiersze (${selectedRows.size})?`)) return;
+        
+        Object.keys(currentBuildingData).forEach(fName => {
+            if (currentBuildingData[fName].apartments) {
+                currentBuildingData[fName].apartments = currentBuildingData[fName].apartments.filter(a => {
+                    if (selectedRows.has(a.id)) {
+                        if (assignModeUnitId === a.id) cancelAssign();
+                        return false;
+                    }
+                    return true;
+                });
+            }
+        });
+        
+        selectedRows.clear();
+        updateDeleteButtonVisibility();
+        render();
+        saveDB();
+    }
+
+    async function saveDB(show = false) {
+        // For backwards compatibility across all floors
+        Object.keys(db.investments).forEach(inv => {
+            Object.keys(db.investments[inv]).forEach(build => {
+                Object.keys(db.investments[inv][build]).forEach(floor => {
+                    const fData = db.investments[inv][build][floor];
+                    if(fData.apartments && fData.outlines) {
+                        fData.apartments.forEach(a => {
+                            if (a.outlineId) {
+                                const matchedOut = fData.outlines.find(o => o.id === a.outlineId);
+                                if (matchedOut) a.points = matchedOut.points;
+                            }
+                        });
+                    }
+                });
+            });
+        });
+
+        const res = await fetch(`/api/save/${devId}`, { method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken}, body: JSON.stringify(db) });
+        if(res.ok && show) alert("Zapisano pomyślnie!");
+    }
+    
+    async function logout() {
+        await fetch('/api/logout', { method: 'POST', headers: {'X-CSRF-Token': csrfToken} });
+        window.location.href = 'index.html';
+    }
+
+    async function initHeader() {
+        try {
+            const res = await fetch('/api/me');
+            if (!res.ok) return;
+            const me = await res.json();
+            document.getElementById('user-avatar').textContent = (me.name || me.email || '?')[0].toUpperCase();
+            const nav = document.getElementById('header-nav');
+            const tiles = [
+                { id: 'sales', href: '/developer.html', icon: '📈', name: 'Panel Sprzedaży', perm: 'sales' },
+                { id: 'inwestycje', href: '/inwestycje.html', icon: '🏢', name: 'Inwestycje', perm: 'inwestycje' },
+                { id: 'admin', href: '/admin.html', icon: '✏️', name: 'Zasoby', perm: 'admin' },
+                { id: 'projekt', href: '/projekt.html', icon: '📁', name: 'Projekt', perm: 'projekt' },
+                { id: 'kontakty', href: '/kontakty.html', icon: '📇', name: 'Baza kontaktów', perm: 'kontakty' },
+                { id: 'usterki', href: '/usterki.html', icon: '⚠️', name: 'Panel Usterek', perm: 'usterki' },
+                { id: 'harmonogram', href: '/harmonogram.html', icon: '📅', name: 'Harmonogram', perm: 'harmonogram' },
+                { id: 'company', href: '/company-admin.html', icon: '💼', name: 'Zarządzanie Firmą', perm: 'company' },
+                { id: 'superadmin', href: '/superadmin.html', icon: '🔑', name: 'Panel SuperAdmina', perm: 'superadmin' }
+            ];
+            const currentPath = window.location.pathname;
+            const companyApps = me.companyApps || ['sales', 'admin', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company'];
+            nav.innerHTML = tiles.filter(t => {
+                if (t.id === 'superadmin') return me.role === 'superadmin';
+                if (me.role === 'companyAdmin') return true;
+                if (t.id === 'company') return me.role === 'superadmin';
+                if (me.role === 'superadmin') return true;
+                return (me.permissions || []).includes(t.perm);
+            }).map(t => {
+                const companyHasApp = (me.role === 'superadmin') || companyApps.includes(t.perm);
+                if (!companyHasApp && me.role !== 'superadmin') {
+                    return `<a href="#" class="nav-item" style="opacity: 0.3; cursor: not-allowed;" title="${t.name} (Niedostępne dla firmy)" onclick="event.preventDefault();">${t.icon}</a>`;
+                }
+                return `<a href="${t.href}" class="nav-item ${currentPath.includes(t.href) ? 'active' : ''}" title="${t.name}">${t.icon}</a>`;
+            }).join('');
+        } catch (e) { console.error(e); }
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>

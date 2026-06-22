@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projekt — Architektura dialogu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #0f1117; color: #f1f5f9; min-height: 100vh; padding-top: 64px; }
+        .bg-glow {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background: radial-gradient(ellipse 60% 50% at 80% 20%, rgba(236,72,153,0.08) 0%, transparent 70%);
+        }
+        /* GLOBAL HEADER */
+        .header {
+            height: 64px; position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 40px; border-bottom: 1px solid rgba(255,255,255,0.06);
+            background: rgba(15,17,23,0.85); backdrop-filter: blur(12px);
+            color: white; font-family: 'Inter', sans-serif;
+        }
+        .header-brand { display: flex; align-items: center; gap: 12px; color: inherit; cursor: default; }
+        .header-icon { width: 32px; height: 32px; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .header-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .header-title { font-size: 16px; font-weight: 700; }
+        
+        .header-nav { display: flex; gap: 8px; background: rgba(255,255,255,0.04); padding: 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); }
+        .nav-item { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; text-decoration: none; font-size: 14px; transition: all 0.2s; color: white; }
+        .nav-item:hover { background: rgba(255,255,255,0.08); }
+        .nav-item.active { background: rgba(255,255,255,0.1); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        
+        .btn-header-back {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 14px; background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+            color: #cbd5e1; font-size: 13px; font-weight: 500; text-decoration: none;
+            transition: all 0.2s; margin-right: 12px;
+        }
+        .btn-header-back:hover { background: rgba(255,255,255,0.12); color: white; border-color: rgba(255,255,255,0.2); }
+
+        .header-user { display: flex; align-items: center; gap: 12px; }
+        .user-avatar { width: 32px; height: 32px; background: linear-gradient(135deg, #6366f1, #a855f7); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+        .main { position: relative; z-index: 1; max-width: 1000px; margin: 40px auto; padding: 0 32px 60px; }
+        .card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px; padding: 28px; margin-bottom: 28px;
+        }
+        .card-title {
+            font-size: 13px; font-weight: 700; color: #94a3b8;
+            text-transform: uppercase; letter-spacing: 0.8px;
+            margin-bottom: 20px; padding-bottom: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .upload-section { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: flex-end; }
+        .field-group { display: flex; flex-direction: column; gap: 6px; }
+        .field-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; }
+        .field-input, select {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px; color: #f1f5f9; padding: 10px; font-size: 13px; outline: none;
+        }
+        .btn-add {
+            background: linear-gradient(135deg, #ec4899, #be185d);
+            color: white; border: none; border-radius: 8px;
+            padding: 11px 20px; font-size: 13px; font-weight: 700; cursor: pointer;
+        }
+        .file-list { margin-top: 20px; }
+        .file-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px; background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; margin-bottom: 8px;
+        }
+        .file-info { display: flex; align-items: center; gap: 12px; }
+        .file-icon { font-size: 20px; }
+        .file-name { font-weight: 600; font-size: 14px; }
+        .file-meta { font-size: 11px; color: #64748b; margin-top: 2px; }
+        .file-category {
+            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            padding: 2px 8px; border-radius: 4px;
+        }
+        .cat-arch { background: rgba(59,130,246,0.1); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2); }
+        .cat-konst { background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.2); }
+        .cat-inst { background: rgba(245,158,11,0.1); color: #fbbf24; border: 1px solid rgba(245,158,11,0.2); }
+        .btn-del { color: #f87171; background: none; border: none; cursor: pointer; font-size: 12px; }
+    </style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<header class="header">
+    <div class="header-brand">
+        <div class="header-icon"><img src="logo.png" alt="Logo"></div>
+        <div class="header-title">Architektura dialogu</div>
+    </div>
+    <div style="display: flex; align-items: center;">
+        <a href="/dashboard.html" class="btn-header-back">← Powrót</a>
+        <nav class="header-nav" id="header-nav">
+            <!-- Ikony renderowane przez JS -->
+        </nav>
+    </div>
+    <div class="header-user">
+        <div class="user-avatar" id="user-avatar">?</div>
+    </div>
+</header>
+<main class="main">
+    <div class="card">
+        <div class="card-title">Dodaj nowy dokument</div>
+        <div class="upload-section">
+            <div class="field-group">
+                <label class="field-label">Nazwa pliku/opisu</label>
+                <input type="text" id="doc-name" class="field-input" placeholder="np. Rzut parteru">
+            </div>
+            <div class="field-group">
+                <label class="field-label">Kategoria</label>
+                <select id="doc-cat">
+                    <option value="arch">Architektura</option>
+                    <option value="konst">Konstrukcja</option>
+                    <option value="inst">Instalacje</option>
+                </select>
+            </div>
+            <div class="field-group">
+                <label class="field-label">Plik</label>
+                <input type="file" id="doc-file" class="field-input">
+            </div>
+            <button class="btn-add" onclick="addFile()">WGRAJ PLIK</button>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-title">Lista plików projektowych</div>
+        <div class="file-list" id="file-list">
+            <!-- Przykładowe pliki -->
+            <div class="file-item">
+                <div class="file-info">
+                    <div class="file-icon">📄</div>
+                    <div>
+                        <div class="file-name">Projekt Architektoniczny - Branża</div>
+                        <div class="file-meta">Wgrano: 2024-05-13 &bull; Rozmiar: 4.2 MB</div>
+                    </div>
+                </div>
+                <span class="file-category cat-arch">Architektura</span>
+                <button class="btn-del">Usuń</button>
+            </div>
+            <div class="file-item">
+                <div class="file-info">
+                    <div class="file-icon">📐</div>
+                    <div>
+                        <div class="file-name">Zbrojenie ław fundamentowych</div>
+                        <div class="file-meta">Wgrano: 2024-05-12 &bull; Rozmiar: 1.8 MB</div>
+                    </div>
+                </div>
+                <span class="file-category cat-konst">Konstrukcja</span>
+                <button class="btn-del">Usuń</button>
+            </div>
+        </div>
+    </div>
+</main>
+<script>
+    function addFile() {
+        const name = document.getElementById('doc-name').value;
+        const cat = document.getElementById('doc-cat').value;
+        const catLabel = document.getElementById('doc-cat').options[document.getElementById('doc-cat').selectedIndex].text;
+        if(!name) return alert("Podaj nazwę!");
+        
+        const list = document.getElementById('file-list');
+        const item = document.createElement('div');
+        item.className = 'file-item';
+        item.innerHTML = `
+            <div class="file-info">
+                <div class="file-icon">📄</div>
+                <div>
+                    <div class="file-name">${name}</div>
+                    <div class="file-meta">Wgrano: ${new Date().toISOString().split('T')[0]} &bull; Rozmiar: 0 KB</div>
+                </div>
+            </div>
+            <span class="file-category cat-${cat}">${catLabel}</span>
+            <button class="btn-del" onclick="this.parentElement.remove()">Usuń</button>
+        `;
+        list.prepend(item);
+        document.getElementById('doc-name').value = '';
+    }
+    async function initHeader() {
+        try {
+            const res = await fetch('/api/me');
+            if (!res.ok) return;
+            const me = await res.json();
+            document.getElementById('user-avatar').textContent = (me.name || me.email || '?')[0].toUpperCase();
+            const nav = document.getElementById('header-nav');
+            const tiles = [
+                { id: 'sales', href: '/developer.html', icon: '📈', name: 'Panel Sprzedaży', perm: 'sales' },
+                { id: 'admin', href: '/admin.html', icon: '✏️', name: 'Edytor sprzedaży', perm: 'admin' },
+                { id: 'projekt', href: '/projekt.html', icon: '📁', name: 'Projekt', perm: 'projekt' },
+                { id: 'kontakty', href: '/kontakty.html', icon: '📇', name: 'Baza kontaktów', perm: 'kontakty' },
+                { id: 'usterki', href: '/usterki.html', icon: '⚠️', name: 'Panel Usterek', perm: 'usterki' },
+                { id: 'harmonogram', href: '/harmonogram.html', icon: '📅', name: 'Harmonogram', perm: 'harmonogram' },
+                { id: 'company', href: '/company-admin.html', icon: '🏢', name: 'Zarządzanie Firmą', perm: 'company' },
+                { id: 'superadmin', href: '/superadmin.html', icon: '🔑', name: 'Panel SuperAdmina', perm: 'superadmin' }
+            ];
+            const currentPath = window.location.pathname;
+                        const companyApps = me.companyApps || ['sales', 'admin', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company'];
+            nav.innerHTML = tiles.filter(t => {
+                if (t.id === 'superadmin') return me.role === 'superadmin';
+                if (me.role === 'companyAdmin') return true;
+                if (t.id === 'company') return me.role === 'superadmin';
+                if (me.role === 'superadmin') return true;
+                return (me.permissions || []).includes(t.perm);
+            }).map(t => {
+                const companyHasApp = (me.role === 'superadmin') || companyApps.includes(t.perm);
+                if (!companyHasApp && me.role !== 'superadmin') {
+                    return `<a href="#" class="nav-item" style="opacity: 0.3; cursor: not-allowed;" title="${t.name} (Niedostępne dla firmy)" onclick="event.preventDefault();">${t.icon}</a>`;
+                }
+                return `<a href="${t.href}" class="nav-item ${currentPath.includes(t.href) ? 'active' : ''}" title="${t.name}">${t.icon}</a>`;
+            }).join('');
+        } catch (e) { console.error(e); }
+    }
+    initHeader();
+</script>
+</body>
+</html>

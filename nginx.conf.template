@@ -1,0 +1,87 @@
+# =============================================================
+# KONFIGURACJA NGINX DLA app.rzutoka.com
+# Plik: /etc/nginx/sites-available/app.rzutoka.com
+# =============================================================
+# Po wgraniu tego pliku na serwer wykonaj:
+#   sudo ln -s /etc/nginx/sites-available/app.rzutoka.com /etc/nginx/sites-enabled/
+#   sudo nginx -t
+#   sudo systemctl reload nginx
+# =============================================================
+
+# --- BLOK 1: Przekierowanie HTTP -> HTTPS (Port 80) ---
+# Nginx przechwytuje każde żądanie HTTP i natychmiast przekierowuje
+# przeglądarkę na szyfrowane połączenie HTTPS.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name app.rzutoka.com;
+
+    # Certbot będzie używał tej lokalizacji do weryfikacji domeny
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    # Przekierowanie 301 (permanentne) na HTTPS
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# --- BLOK 2: Obsługa HTTPS (Port 443) ---
+# Ten blok obsługuje szyfrowane połączenia i przekazuje ruch
+# do aplikacji Node.js działającej lokalnie na porcie 3000.
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name app.rzutoka.com;
+
+    # --- Certyfikaty SSL (wygenerowane przez Certbot) ---
+    # Certbot automatycznie wypełni te ścieżki po uruchomieniu.
+    ssl_certificate     /etc/letsencrypt/live/app.rzutoka.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/app.rzutoka.com/privkey.pem;
+
+    # Zalecane ustawienia SSL (nowoczesne protokoły, odporność na ataki)
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+
+    # --- Nagłówki bezpieczeństwa HTTP ---
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # --- Limity rozmiaru wgrywanych plików ---
+    # Ustaw tyle, ile wynosi maksymalny rozmiar pliku, który użytkownik może wgrać.
+    # Aplikacja ma limit 50mb w express, więc ustaw nieco więcej.
+    client_max_body_size 60M;
+
+    # --- Logi ---
+    access_log /var/log/nginx/app.rzutoka.access.log;
+    error_log  /var/log/nginx/app.rzutoka.error.log;
+
+    # --- Reverse Proxy do aplikacji Node.js ---
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+
+        # Nagłówki przekazywane do aplikacji Node.js
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+
+        # Timeouty (ważne przy wgrywaniu dużych plików)
+        proxy_connect_timeout 60s;
+        proxy_send_timeout    120s;
+        proxy_read_timeout    120s;
+    }
+}
