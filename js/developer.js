@@ -1132,15 +1132,6 @@ function closePdf() {
   } else document.getElementById("no-floor-msg").style.display = "block";
 }
 
-function printPdf() {
-  const viewer = document.getElementById("pdf-viewer");
-  if (viewer.contentWindow) viewer.contentWindow.print();
-}
-
-function downloadPdf() {
-  const link = document.createElement("a");
-  window.location.href = "index.html";
-}
 
 function downloadExcel() {
   if (!currentInv) {
