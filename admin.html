@@ -908,7 +908,13 @@
             });
         });
         const res = await fetch(`/api/save/${devId}`, { method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken}, body: JSON.stringify(db) });
-        if (res.ok && show) alert('Zapisano pomyślnie!');
+        if (res.ok) {
+            const result = await res.json();
+            if (result._dbVersion) db._dbVersion = result._dbVersion;
+            if (show) alert('Zapisano pomyślnie!');
+        } else {
+            console.error("Błąd zapisu DB.");
+        }
     }
 
     async function initHeader() {
