@@ -440,7 +440,7 @@
     function closeNewFloorDialog() { document.getElementById('modal-new-floor').style.display = 'none'; }
     function toggleNewFloorBuilding() {
         const group = document.querySelector('input[name="nf-group"]:checked')?.value;
-        document.getElementById('nf-building-row').style.display = (group === 'nad') ? 'block' : 'none';
+        document.getElementById('nf-building-row').style.display = (group === 'nad' || group === 'pod') ? 'block' : 'none';
     }
     document.querySelectorAll('input[name="nf-group"]').forEach(r => r.addEventListener('change', toggleNewFloorBuilding));
 
@@ -448,7 +448,7 @@
         const inv = getCurrentInv();
         const name = document.getElementById('nf-name').value.trim();
         const group = document.querySelector('input[name="nf-group"]:checked')?.value || 'nad';
-        const building = (group === 'nad') ? document.getElementById('nf-building').value.trim() : null;
+        const building = (group === 'nad' || group === 'pod') ? document.getElementById('nf-building').value.trim() : null;
         if (!name) return alert('Podaj nazwę rzutu!');
         if (db.investments[inv]._floors[name]) return alert('Rzut o tej nazwie już istnieje!');
         db.investments[inv]._floors[name] = { group, building: building || null, apartments: [], outlines: [] };
@@ -497,7 +497,7 @@
 
     function toggleAssignBuilding() {
         const group = document.getElementById('assign-group').value;
-        document.getElementById('assign-building-row').style.display = (group === 'nad') ? 'block' : 'none';
+        document.getElementById('assign-building-row').style.display = (group === 'nad' || group === 'pod') ? 'block' : 'none';
     }
 
     async function saveFloorAssignment() {
@@ -506,7 +506,7 @@
         if (!floor || !inv) return;
         
         const group = document.getElementById('assign-group').value;
-        const building = (group === 'nad') ? document.getElementById('assign-building').value.trim() : null;
+        const building = (group === 'nad' || group === 'pod') ? document.getElementById('assign-building').value.trim() : null;
         
         const floors = getFloors(inv);
         if (floors[floor]) {
