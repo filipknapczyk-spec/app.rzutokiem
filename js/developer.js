@@ -424,6 +424,20 @@ function render() {
     return true; // ZT i pod zawsze widoczne
   });
 
+  // PRE-OBLICZANIE STATYSTYK DLA WIDOKU (przed filtrami z inputów)
+  floorEntries.forEach(([_, fData]) => {
+    (fData.apartments || []).forEach((apt) => {
+      let rawType = apt.type || "LM";
+      if (rawType === "KL" || rawType === "K") rawType = "K";
+      if (!stats[rawType]) rawType = "LM";
+      
+      const status = (apt.status || "wolne").toLowerCase();
+      if (status.includes("rez") || status.includes("zarezerwowane")) stats[rawType].rezerwacja++;
+      else if (status.includes("sprzed")) stats[rawType].sprzedane++;
+      else stats[rawType].wolne++;
+    });
+  });
+
   floorEntries.forEach(([floorName, floorData]) => {
     const filteredApts = floorData.apartments
       .filter((apt) => {
@@ -453,22 +467,15 @@ function render() {
     tbody.appendChild(fHeader);
 
     filteredApts.forEach((apt) => {
-      let rawType = apt.type || "LM";
-      if (rawType === "KL" || rawType === "K") rawType = "K";
-      if (!stats[rawType]) rawType = "LM";
+      let typeShort = apt.type || "LM";
+      if (typeShort === "K") typeShort = "KL";
       
-      const status = (apt.status || "wolne").toLowerCase();
-      if (status.includes("rez") || status.includes("zarezerwowane")) stats[rawType].rezerwacja++;
-      else if (status.includes("sprzed")) stats[rawType].sprzedane++;
-      else stats[rawType].wolne++;
-
-      if (rawType === "LM") {
+      if (typeShort === "LM") {
         const numericArea = parseFloat((apt.area || "0").toString().replace(",", ".")) || 0;
         totalArea += numericArea;
       }
 
-      let typeShort = apt.type || "LM";
-      if (typeShort === "K") typeShort = "KL";
+      const status = (apt.status || "wolne").toLowerCase();
       const safeNum = getSafeId(typeShort + "-" + apt.number);
       let priceMainDisplay = "-";
       let pricePerM2Display = "";
@@ -577,6 +584,16 @@ function render() {
       }
     });
   });
+  const sumLM = stats.LM.wolne + stats.LM.rezerwacja + stats.LM.sprzedane;
+  const sumMP = stats.MP.wolne + stats.MP.rezerwacja + stats.MP.sprzedane;
+  const sumK = stats.K.wolne + stats.K.rezerwacja + stats.K.sprzedane;
+  const sumLU = stats.LU.wolne + stats.LU.rezerwacja + stats.LU.sprzedane;
+
+  document.getElementById("stat-lm-container").title = `Lokale mieszkalne (Łącznie: ${sumLM}) | Wolne / Zarezerwowane / Sprzedane`;
+  document.getElementById("stat-mp-container").title = `Miejsca postojowe (Łącznie: ${sumMP}) | Wolne / Zarezerwowane / Sprzedane`;
+  document.getElementById("stat-k-container").title = `Komórki lokatorskie (Łącznie: ${sumK}) | Wolne / Zarezerwowane / Sprzedane`;
+  document.getElementById("stat-lu-container").title = `Lokale usługowe (Łącznie: ${sumLU}) | Wolne / Zarezerwowane / Sprzedane`;
+
   document.getElementById("stat-lm").innerText = `${stats.LM.wolne}/${stats.LM.rezerwacja}/${stats.LM.sprzedane}`;
   document.getElementById("stat-mp").innerText = `${stats.MP.wolne}/${stats.MP.rezerwacja}/${stats.MP.sprzedane}`;
   document.getElementById("stat-k").innerText = `${stats.K.wolne}/${stats.K.rezerwacja}/${stats.K.sprzedane}`;
