@@ -580,8 +580,24 @@
             const img = document.getElementById('plan-img');
             const cont = document.getElementById('map-cont');
             currentZoom = 1; panX = 0; panY = 0; updateMapTransform();
-            img.onload = () => { cont.style.display = 'block'; document.getElementById('canvas').setAttribute('viewBox', `0 0 ${img.naturalWidth} ${img.naturalHeight}`); render(); };
-            img.src = `/uploads/${devId}/${inv}/_floors/${encodeURIComponent(floor)}.jpg?t=${Date.now()}`;
+            const newSrc = `/uploads/${devId}/${inv}/_floors/${encodeURIComponent(floor)}.jpg?t=${Date.now()}`;
+            const legacySrc = currentFloorData.building ? `/uploads/${devId}/${inv}/${encodeURIComponent(currentFloorData.building)}/plans/${encodeURIComponent(floor)}.jpg?t=${Date.now()}` : null;
+            
+            img.onerror = () => {
+                if (legacySrc && img.src.indexOf('_floors') !== -1) {
+                    img.src = legacySrc;
+                } else {
+                    cont.style.display = 'block';
+                    document.getElementById('canvas').setAttribute('viewBox', `0 0 2000 1500`);
+                    render();
+                }
+            };
+            img.onload = () => { 
+                cont.style.display = 'block'; 
+                document.getElementById('canvas').setAttribute('viewBox', `0 0 ${img.naturalWidth} ${img.naturalHeight}`); 
+                render(); 
+            };
+            img.src = newSrc;
         } else {
             currentFloorData = null;
             document.getElementById('map-cont').style.display = 'none';
