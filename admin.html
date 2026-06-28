@@ -465,6 +465,7 @@
         if (!floor) return alert('Wybierz rzut!');
         const newName = prompt('Podaj nową nazwę rzutu:', floor);
         if (!newName || newName === floor) return;
+        if (getFloors(inv)[newName]) return alert(`Rzut o nazwie "${newName}" już istnieje w tej inwestycji!`);
         const floors = getFloors(inv);
         
         try {
