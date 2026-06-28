@@ -338,7 +338,9 @@ td {
 }
 
 .col-nr {
-  width: 35px;
+  width: auto;
+  white-space: nowrap;
+  min-width: 45px;
 }
 
 .col-area {
