@@ -229,6 +229,9 @@ body {
 }
 
 #pdf-viewer {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   border: none;
@@ -1012,6 +1015,7 @@ select.filter-select {
     display: none !important;
   }
   #main-view {
+    height: calc(100vh - 130px) !important;
     flex-direction: column;
     overflow: hidden;
   }
@@ -1019,20 +1023,34 @@ select.filter-select {
     display: none !important;
   }
   #canvas-column {
-    display: none;
+    display: none !important;
     width: 100% !important;
-    flex: 1 1 100% !important;
+    height: 100% !important;
+    flex: none !important;
+    flex-direction: column !important;
   }
   #table-panel {
     width: 100% !important;
-    flex: 1 1 100% !important;
-    display: flex;
+    height: 100% !important;
+    flex: none !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
   #main-view.mobile-map-active #canvas-column {
     display: flex !important;
   }
   #main-view.mobile-map-active #table-panel {
     display: none !important;
+  }
+  #canvas-area {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    flex: none !important;
+  }
+  .map-container {
+    width: 100% !important;
+    height: 100% !important;
   }
 }
 
