@@ -796,19 +796,17 @@ function openModal(apt) {
     const allMPs = [];
     const allKs = [];
 
-    // Zbieramy dane z całej inwestycji
-    for (const b in db.investments[currentInv]) {
-      if (b.startsWith("_")) continue;
-      for (const f in db.investments[currentInv][b]) {
-        const apts = db.investments[currentInv][b][f].apartments || [];
-        apts.forEach((a) => {
-          a._building = b; // tymczasowe info do wyświetlania
-          if (a.type === "LM") allLMs.push(a);
-          if (a.type === "MP") allMPs.push(a);
-          if (a.type === "K" || a.type === "KL") allKs.push(a);
-        });
-      }
-    }
+    // Zbieramy dane z całej inwestycji (w nowej architekturze)
+    const floors = db.investments[currentInv]?._floors || {};
+    Object.values(floors).forEach(fData => {
+      const apts = fData.apartments || [];
+      apts.forEach((a) => {
+        a._building = fData.building || ""; // Wyłuskanie prawdziwej nazwy budynku zamiast błędu iteracji
+        if (a.type === "LM") allLMs.push(a);
+        if (a.type === "MP") allMPs.push(a);
+        if (a.type === "K" || a.type === "KL") allKs.push(a);
+      });
+    });
 
     // Funkcja sprawdzająca czy zasób jest przypisany do INNEGO LM
     const isAssignedToOther = (resId) => {
