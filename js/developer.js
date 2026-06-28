@@ -184,6 +184,11 @@ async function init() {
     sel.innerHTML =
       '<option value="">Wybierz Inwestycję</option>' +
       invKeys.map((k) => `<option value="${k}">${k}</option>`).join("");
+      
+    if (invKeys.length === 1) {
+        sel.value = invKeys[0];
+        changeInvestment();
+    }
   } catch (e) {
     console.error("Błąd inicjalizacji:", e);
   }
