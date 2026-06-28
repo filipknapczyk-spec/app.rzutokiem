@@ -1052,6 +1052,29 @@ select.filter-select {
   #canvas-column.mobile-modal-open {
     display: flex !important;
   }
+
+  /* Naprawa modalu wyskakującego okna na mobilce */
+  #modal-overlay {
+    align-items: flex-end !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+  .modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 85dvh !important;
+    max-height: 85vh !important; /* fallback dla starszych przeglądarek */
+    border-radius: 16px 16px 0 0 !important;
+    padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px)) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .modal-actions {
+    position: sticky !important;
+    bottom: 0 !important;
+    background: white !important;
+    padding-top: 12px !important;
+    margin-top: 8px !important;
+  }
 }
 
 .mobile-only {
