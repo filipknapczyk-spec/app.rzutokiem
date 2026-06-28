@@ -466,6 +466,16 @@
         const newName = prompt('Podaj nową nazwę rzutu:', floor);
         if (!newName || newName === floor) return;
         const floors = getFloors(inv);
+        
+        try {
+            const res = await fetch('/api/rename-floor', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                body: JSON.stringify({ devId, investId: inv, buildingId: floors[floor].building, oldName: floor, newName })
+            });
+            if (!res.ok) console.error("Rename api error");
+        } catch (e) { console.error(e); }
+
         floors[newName] = floors[floor];
         delete floors[floor];
         loadFloors();
@@ -500,7 +510,19 @@
         
         const floors = getFloors(inv);
         if (floors[floor]) {
-            if (floors[floor].group === group && floors[floor].building === building) return; // bez zmian
+            const oldBuilding = floors[floor].building;
+            if (floors[floor].group === group && oldBuilding === building) return; // bez zmian
+            
+            if (oldBuilding) {
+                try {
+                    await fetch('/api/migrate-floor-file', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                        body: JSON.stringify({ devId, investId: inv, buildingId: oldBuilding, floorName: floor })
+                    });
+                } catch(e) { console.error(e); }
+            }
+
             floors[floor].group = group;
             floors[floor].building = building || null;
         }
