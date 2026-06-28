@@ -383,7 +383,37 @@ function renderSvgOnly() {
     poly.setAttribute("class", "status-" + status);
     poly.onmouseenter = () => { document.getElementById(`row-${safeNum}`)?.classList.add("highlight-row"); document.getElementById(`row-info-${safeNum}`)?.classList.add("highlight-row"); };
     poly.onmouseleave = () => { document.getElementById(`row-${safeNum}`)?.classList.remove("highlight-row"); document.getElementById(`row-info-${safeNum}`)?.classList.remove("highlight-row"); };
-    poly.onclick = () => openModal(apt);
+    poly.onclick = (e) => {
+      let filtersChanged = false;
+      const checkReset = (id) => {
+         const el = document.getElementById(id);
+         if (el && el.value !== "all") {
+            el.value = "all";
+            filtersChanged = true;
+         }
+      };
+      checkReset("filter-status");
+      checkReset("filter-type");
+      checkReset("filter-rooms");
+      
+      const searchEl = document.getElementById("search-client");
+      if (searchEl && searchEl.value.trim() !== "") {
+          searchEl.value = "";
+          filtersChanged = true;
+      }
+      if (filtersChanged) render();
+
+      const tr = document.getElementById(`row-${safeNum}`);
+      if (tr) {
+          tr.scrollIntoView({ behavior: "smooth", block: "center" });
+          tr.classList.add("highlight-row");
+          setTimeout(() => tr.classList.remove("highlight-row"), 2000);
+      }
+    };
+    poly.ondblclick = (e) => {
+       e.preventDefault();
+       openModal(apt);
+    };
     svg.appendChild(poly);
   });
 }
@@ -524,7 +554,17 @@ function render() {
       const tr = document.createElement("tr");
       tr.id = `row-${safeNum}`;
       tr.className = "clickable-row row-" + status;
-      tr.onclick = () => openModal(apt);
+      tr.onclick = (e) => {
+         if (currentFloor !== floorName) {
+             const btn = Array.from(document.querySelectorAll(".floor-btn")).find(b => b.innerText.includes(floorName) || b.title.includes(floorName));
+             if (btn) selectFloorBtn(btn, floorName);
+             else displayFloor(floorName);
+         }
+      };
+      tr.ondblclick = (e) => {
+         e.preventDefault();
+         openModal(apt);
+      };
       tr.onmouseenter = () => {
         const poly = document.getElementById(`poly-${safeNum}`);
         if (poly) poly.classList.add("highlight-poly");
@@ -578,6 +618,7 @@ function render() {
         infoTr.id = `row-info-${safeNum}`;
         infoTr.innerHTML = `<td colspan="13"><b>Uwagi:</b> ${apt.additionalInfo}</td>`;
         infoTr.onclick = tr.onclick;
+        infoTr.ondblclick = tr.ondblclick;
         infoTr.onmouseenter = tr.onmouseenter;
         infoTr.onmouseleave = tr.onmouseleave;
         tbody.appendChild(infoTr);
