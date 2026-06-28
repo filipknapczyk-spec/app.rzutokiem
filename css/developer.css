@@ -146,7 +146,7 @@ body {
   background: #dee2e6;
   border-right: 1px solid #ccc;
   position: relative;
-  min-width: 0;
+  min-width: 35%;
   overflow: hidden;
 }
 
@@ -241,12 +241,11 @@ body {
 }
 
 #table-panel {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   min-width: 320px;
   background: white;
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
 }
 
 .table-controls {
