@@ -179,12 +179,21 @@
               oninput="render()"
             />
           </div>
-          <div class="stats-bar">
-            <div class="stat-item">
-              Liczba lokali: <span id="stat-count" class="stat-value">0</span>
+          <div class="stats-bar" style="display:flex; flex-wrap:wrap; gap:15px; font-size:12px;">
+            <div class="stat-item" title="wolne / zarezerwowane / sprzedane">
+              Mieszkalne (LM): <span id="stat-lm" class="stat-value">0/0/0</span>
+            </div>
+            <div class="stat-item" title="wolne / zarezerwowane / sprzedane">
+              M. Postojowe (MP): <span id="stat-mp" class="stat-value">0/0/0</span>
+            </div>
+            <div class="stat-item" title="wolne / zarezerwowane / sprzedane">
+              Komórki (K): <span id="stat-k" class="stat-value">0/0/0</span>
+            </div>
+            <div class="stat-item" title="wolne / zarezerwowane / sprzedane">
+              Usługowe (LU): <span id="stat-lu" class="stat-value">0/0/0</span>
             </div>
             <div class="stat-item">
-              Suma m²: <span id="stat-area" class="stat-value">0,00</span>
+              Suma m² (LM): <span id="stat-area" class="stat-value">0,00</span>
             </div>
           </div>
         </div>

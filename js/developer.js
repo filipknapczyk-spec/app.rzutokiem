@@ -398,7 +398,13 @@ function render() {
   const fFloor = document.getElementById("filter-floor").value;
   const fSearch = document.getElementById("search-client").value.toLowerCase();
 
-  let totalCount = 0, totalArea = 0;
+  const stats = {
+      LM: { wolne: 0, rezerwacja: 0, sprzedane: 0 },
+      MP: { wolne: 0, rezerwacja: 0, sprzedane: 0 },
+      K: { wolne: 0, rezerwacja: 0, sprzedane: 0 },
+      LU: { wolne: 0, rezerwacja: 0, sprzedane: 0 }
+  };
+  let totalArea = 0;
 
   // Id -> numer dla wyświetlania MP/K
   const idToNumber = {};
@@ -447,11 +453,20 @@ function render() {
     tbody.appendChild(fHeader);
 
     filteredApts.forEach((apt) => {
-      totalCount++;
-      const numericArea =
-        parseFloat(apt.area.toString().replace(",", ".")) || 0;
-      totalArea += numericArea;
+      let rawType = apt.type || "LM";
+      if (rawType === "KL" || rawType === "K") rawType = "K";
+      if (!stats[rawType]) rawType = "LM";
+      
       const status = (apt.status || "wolne").toLowerCase();
+      if (status.includes("rez") || status.includes("zarezerwowane")) stats[rawType].rezerwacja++;
+      else if (status.includes("sprzed")) stats[rawType].sprzedane++;
+      else stats[rawType].wolne++;
+
+      if (rawType === "LM") {
+        const numericArea = parseFloat((apt.area || "0").toString().replace(",", ".")) || 0;
+        totalArea += numericArea;
+      }
+
       let typeShort = apt.type || "LM";
       if (typeShort === "K") typeShort = "KL";
       const safeNum = getSafeId(typeShort + "-" + apt.number);
@@ -562,10 +577,11 @@ function render() {
       }
     });
   });
-  document.getElementById("stat-count").innerText = totalCount;
-  document.getElementById("stat-area").innerText = totalArea
-    .toFixed(2)
-    .replace(".", ",");
+  document.getElementById("stat-lm").innerText = `${stats.LM.wolne}/${stats.LM.rezerwacja}/${stats.LM.sprzedane}`;
+  document.getElementById("stat-mp").innerText = `${stats.MP.wolne}/${stats.MP.rezerwacja}/${stats.MP.sprzedane}`;
+  document.getElementById("stat-k").innerText = `${stats.K.wolne}/${stats.K.rezerwacja}/${stats.K.sprzedane}`;
+  document.getElementById("stat-lu").innerText = `${stats.LU.wolne}/${stats.LU.rezerwacja}/${stats.LU.sprzedane}`;
+  document.getElementById("stat-area").innerText = totalArea.toFixed(2).replace(".", ",");
 }
 
 function openModal(apt) {
