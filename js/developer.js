@@ -408,6 +408,7 @@ function renderSvgOnly() {
           tr.scrollIntoView({ behavior: "smooth", block: "center" });
           tr.classList.add("highlight-row");
           setTimeout(() => tr.classList.remove("highlight-row"), 2000);
+          if (typeof toggleMobileView === "function") toggleMobileView("table");
       }
     };
     poly.ondblclick = (e) => {
@@ -1231,7 +1232,15 @@ async function deleteFile(type, fileName) {
   }
 }
 
+function toggleMobileView(view) {
+  const container = document.getElementById("main-view");
+  if (!container) return;
+  if (view === "map") container.classList.add("mobile-map-active");
+  else container.classList.remove("mobile-map-active");
+}
+
 function openPdf(url, aptNumber, typeName) {
+  if (typeof toggleMobileView === "function") toggleMobileView("map");
   currentPdfUrl = url;
   document.getElementById("map-cont").style.display = "none";
   document.getElementById("no-floor-msg").style.display = "none";

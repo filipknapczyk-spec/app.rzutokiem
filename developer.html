@@ -61,6 +61,9 @@
     <div id="main-view">
       <div id="canvas-column">
         <div class="view-controls">
+          <button class="btn-toggle-map mobile-only" onclick="toggleMobileView('table')">
+            ⬅ Wróć do Tabeli
+          </button>
           <div
             id="nav-elements"
             style="
@@ -170,7 +173,9 @@
               accept=".csv"
               onchange="handleImport(event)"
             />
-
+            <button class="btn-toggle-map mobile-only" onclick="toggleMobileView('map')">
+              📱 Pokaż Rzuty Budynku
+            </button>
             <input
               type="text"
               id="search-client"

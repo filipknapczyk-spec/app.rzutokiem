@@ -997,3 +997,71 @@ select.filter-select {
 .multi-select-item:hover {
   background: #f1f1f1;
 }
+
+/* ======================================================== */
+/*                  MOBILE RESPONSIVE UX                    */
+/* ======================================================== */
+@media (max-width: 768px) {
+  nav a.nav-link:not([href="developer.html"]):not([href="/api/logout"]) {
+    display: none !important;
+  }
+  .filter-group {
+    display: none !important;
+  }
+  .btn-excel, .btn-import, button[onclick*="import-file"] {
+    display: none !important;
+  }
+  #main-view {
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #resizer {
+    display: none !important;
+  }
+  #canvas-column {
+    display: none;
+    width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+  #table-panel {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    display: flex;
+  }
+  #main-view.mobile-map-active #canvas-column {
+    display: flex !important;
+  }
+  #main-view.mobile-map-active #table-panel {
+    display: none !important;
+  }
+}
+
+.mobile-only {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: inline-flex !important;
+  }
+  .desktop-only {
+    display: none !important;
+  }
+  .btn-toggle-map {
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-right: 10px;
+  }
+  .btn-toggle-map:active {
+    background: #218838;
+  }
+}
