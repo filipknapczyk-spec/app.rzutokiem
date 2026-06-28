@@ -1251,22 +1251,22 @@ async function deleteFile(type, fileName) {
 }
 
 function toggleMobileView(view) {
-  const container = document.getElementById("main-view");
-  if (!container) return;
+  const modal = document.getElementById("canvas-column");
+  if (!modal) return;
   if (view === "map") {
-    container.classList.add("mobile-map-active");
-    history.pushState({ mobileModal: true }, "", "#mobile-map");
+    modal.classList.add("mobile-modal-open");
+    try { history.pushState({ mobileModal: true }, "", "#mobile-map"); } catch(e) {}
     setTimeout(() => window.dispatchEvent(new Event("resize")), 100);
   } else {
-    container.classList.remove("mobile-map-active");
-    if (location.hash === "#mobile-map") history.back();
+    modal.classList.remove("mobile-modal-open");
+    try { if (location.hash === "#mobile-map") history.back(); } catch(e) {}
   }
 }
 
 window.addEventListener("popstate", (e) => {
-  const container = document.getElementById("main-view");
-  if (container && container.classList.contains("mobile-map-active") && location.hash !== "#mobile-map") {
-    container.classList.remove("mobile-map-active");
+  const modal = document.getElementById("canvas-column");
+  if (modal && modal.classList.contains("mobile-modal-open") && location.hash !== "#mobile-map") {
+    modal.classList.remove("mobile-modal-open");
   }
 });
 

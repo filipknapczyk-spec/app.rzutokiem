@@ -1042,11 +1042,8 @@ select.filter-select {
     display: flex !important;
     flex-direction: column !important;
   }
-  #main-view.mobile-map-active #canvas-column {
+  #canvas-column.mobile-modal-open {
     display: flex !important;
-  }
-  #main-view.mobile-map-active #table-panel {
-    display: none !important;
   }
 }
 
