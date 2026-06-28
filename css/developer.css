@@ -241,7 +241,7 @@ body {
 }
 
 #table-panel {
-  flex: 0 1 auto;
+  flex: 0 0 35%;
   min-width: 320px;
   background: white;
   display: flex;
