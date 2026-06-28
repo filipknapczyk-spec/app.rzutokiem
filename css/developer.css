@@ -1040,6 +1040,14 @@ select.filter-select {
     flex: 1 1 0 !important;
     display: flex !important;
     flex-direction: column !important;
+    overflow: hidden !important;
+    min-height: 0 !important;
+  }
+  .table-container {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    min-height: 0 !important;
   }
   #canvas-column.mobile-modal-open {
     display: flex !important;
