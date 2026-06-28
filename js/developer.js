@@ -1235,8 +1235,12 @@ async function deleteFile(type, fileName) {
 function toggleMobileView(view) {
   const container = document.getElementById("main-view");
   if (!container) return;
-  if (view === "map") container.classList.add("mobile-map-active");
-  else container.classList.remove("mobile-map-active");
+  if (view === "map") {
+    container.classList.add("mobile-map-active");
+    setTimeout(() => window.dispatchEvent(new Event("resize")), 100);
+  } else {
+    container.classList.remove("mobile-map-active");
+  }
 }
 
 function openPdf(url, aptNumber, typeName) {

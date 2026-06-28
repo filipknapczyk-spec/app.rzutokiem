@@ -1015,7 +1015,6 @@ select.filter-select {
     display: none !important;
   }
   #main-view {
-    height: calc(100vh - 130px) !important;
     flex-direction: column;
     overflow: hidden;
   }
@@ -1025,14 +1024,12 @@ select.filter-select {
   #canvas-column {
     display: none !important;
     width: 100% !important;
-    height: 100% !important;
-    flex: none !important;
+    flex: 1 1 0 !important;
     flex-direction: column !important;
   }
   #table-panel {
     width: 100% !important;
-    height: 100% !important;
-    flex: none !important;
+    flex: 1 1 0 !important;
     display: flex !important;
     flex-direction: column !important;
   }
@@ -1041,16 +1038,6 @@ select.filter-select {
   }
   #main-view.mobile-map-active #table-panel {
     display: none !important;
-  }
-  #canvas-area {
-    display: block !important;
-    width: 100% !important;
-    height: 100% !important;
-    flex: none !important;
-  }
-  .map-container {
-    width: 100% !important;
-    height: 100% !important;
   }
 }
 
