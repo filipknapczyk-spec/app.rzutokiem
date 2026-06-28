@@ -798,6 +798,7 @@ function openModal(apt) {
 
     // Zbieramy dane z całej inwestycji
     for (const b in db.investments[currentInv]) {
+      if (b.startsWith("_")) continue;
       for (const f in db.investments[currentInv][b]) {
         const apts = db.investments[currentInv][b][f].apartments || [];
         apts.forEach((a) => {
