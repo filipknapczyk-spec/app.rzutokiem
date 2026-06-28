@@ -1007,7 +1007,7 @@ select.filter-select {
 /*                  MOBILE RESPONSIVE UX                    */
 /* ======================================================== */
 @media (max-width: 768px) {
-  nav a:not([href="developer.html"]):not([href="/api/logout"]) {
+  nav a:not([href="developer.html"]):not([href="/api/logout"]), .btn-header-back {
     display: none !important;
   }
   .filter-group {
