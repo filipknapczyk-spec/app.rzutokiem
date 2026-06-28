@@ -589,16 +589,25 @@ function render() {
   const sumK = stats.K.wolne + stats.K.rezerwacja + stats.K.sprzedane;
   const sumLU = stats.LU.wolne + stats.LU.rezerwacja + stats.LU.sprzedane;
 
-  document.getElementById("stat-lm-container").title = `Lokale mieszkalne (Łącznie: ${sumLM}) | Wolne / Zarezerwowane / Sprzedane`;
-  document.getElementById("stat-mp-container").title = `Miejsca postojowe (Łącznie: ${sumMP}) | Wolne / Zarezerwowane / Sprzedane`;
-  document.getElementById("stat-k-container").title = `Komórki lokatorskie (Łącznie: ${sumK}) | Wolne / Zarezerwowane / Sprzedane`;
-  document.getElementById("stat-lu-container").title = `Lokale usługowe (Łącznie: ${sumLU}) | Wolne / Zarezerwowane / Sprzedane`;
+  const cLM = document.getElementById("stat-lm-container");
+  if (cLM) cLM.title = `Lokale mieszkalne (Łącznie: ${sumLM}) | Wolne / Zarezerwowane / Sprzedane`;
+  const cMP = document.getElementById("stat-mp-container");
+  if (cMP) cMP.title = `Miejsca postojowe (Łącznie: ${sumMP}) | Wolne / Zarezerwowane / Sprzedane`;
+  const cK = document.getElementById("stat-k-container");
+  if (cK) cK.title = `Komórki lokatorskie (Łącznie: ${sumK}) | Wolne / Zarezerwowane / Sprzedane`;
+  const cLU = document.getElementById("stat-lu-container");
+  if (cLU) cLU.title = `Lokale usługowe (Łącznie: ${sumLU}) | Wolne / Zarezerwowane / Sprzedane`;
 
-  document.getElementById("stat-lm").innerText = `${stats.LM.wolne}/${stats.LM.rezerwacja}/${stats.LM.sprzedane}`;
-  document.getElementById("stat-mp").innerText = `${stats.MP.wolne}/${stats.MP.rezerwacja}/${stats.MP.sprzedane}`;
-  document.getElementById("stat-k").innerText = `${stats.K.wolne}/${stats.K.rezerwacja}/${stats.K.sprzedane}`;
-  document.getElementById("stat-lu").innerText = `${stats.LU.wolne}/${stats.LU.rezerwacja}/${stats.LU.sprzedane}`;
-  document.getElementById("stat-area").innerText = totalArea.toFixed(2).replace(".", ",");
+  const sLM = document.getElementById("stat-lm");
+  if (sLM) sLM.innerText = `${stats.LM.wolne}/${stats.LM.rezerwacja}/${stats.LM.sprzedane}`;
+  const sMP = document.getElementById("stat-mp");
+  if (sMP) sMP.innerText = `${stats.MP.wolne}/${stats.MP.rezerwacja}/${stats.MP.sprzedane}`;
+  const sK = document.getElementById("stat-k");
+  if (sK) sK.innerText = `${stats.K.wolne}/${stats.K.rezerwacja}/${stats.K.sprzedane}`;
+  const sLU = document.getElementById("stat-lu");
+  if (sLU) sLU.innerText = `${stats.LU.wolne}/${stats.LU.rezerwacja}/${stats.LU.sprzedane}`;
+  const sArea = document.getElementById("stat-area");
+  if (sArea) sArea.innerText = totalArea.toFixed(2).replace(".", ",");
 }
 
 function openModal(apt) {
