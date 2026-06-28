@@ -600,7 +600,15 @@ function render() {
       tr.innerHTML = `
                     <td class="col-status"><span class="status-pill st-${status}">${status}</span></td>
                     <td class="col-type" style="width: 30px; text-align: center; font-size: 11px; font-weight: bold; color: #666;">${typeShort}</td>
-                    <td class="col-nr"><b>${apt.number}</b></td>
+                    <td class="col-nr">
+                      <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                        <b>${apt.number}</b>
+                        <div style="display: flex; gap: 6px; font-size: 11px;">
+                          ${apt.hasKM ? `<span class="file-link" onclick="event.stopPropagation(); openPdf('${kmUrl}', '${apt.number}', 'KM')">KM</span>` : ""}
+                          ${apt.hasKI ? `<span class="file-link" onclick="event.stopPropagation(); openPdf('${kiUrl}', '${apt.number}', 'KI')">KI</span>` : ""}
+                        </div>
+                      </div>
+                    </td>
                     <td class="col-area"><div class="area-container"><span class="area-main">${apt.area}</span><span class="area-extra">${apt.balconyArea || ""}</span></div></td>
                     <td class="col-rooms">${apt.rooms || "-"}</td>
                     <td class="col-price">
@@ -611,8 +619,7 @@ function render() {
                     </td>
                     <td class="col-client"><div class="client-info"><span class="client-name">${apt.clientName || "-"}</span><span class="contact-line">TEL: ${apt.clientPhone || ""}</span><span class="email-line">EMAIL: ${apt.clientEmail || ""}</span></div></td>
                     <td class="col-contract">${contractsHtml}</td>
-                    <td class="col-km">${apt.hasKM ? `<span class="file-link" onclick="event.stopPropagation(); openPdf('${kmUrl}', '${apt.number}', 'KM')">KM</span>` : "-"}</td>
-                    <td class="col-ki">${apt.hasKI ? `<span class="file-link" onclick="event.stopPropagation(); openPdf('${kiUrl}', '${apt.number}', 'KI')">KI</span>` : "-"}</td>
+
                     <td class="col-changes-file">${(() => {
                       let kzHtml = apt.hasChanges === "TAK" ? "TAK" : "-";
                       if (apt.kzFiles && apt.kzFiles.length > 0) {
@@ -635,7 +642,7 @@ function render() {
         const infoTr = document.createElement("tr");
         infoTr.className = "info-row";
         infoTr.id = `row-info-${safeNum}`;
-        infoTr.innerHTML = `<td colspan="13"><b>Uwagi:</b> ${apt.additionalInfo}</td>`;
+        infoTr.innerHTML = `<td colspan="11"><b>Uwagi:</b> ${apt.additionalInfo}</td>`;
         infoTr.onclick = tr.onclick;
         infoTr.ondblclick = tr.ondblclick;
         infoTr.onmouseenter = tr.onmouseenter;
