@@ -470,8 +470,8 @@ function render() {
       let typeShort = apt.type || "LM";
       if (typeShort === "K") typeShort = "KL";
       
+      const numericArea = parseFloat((apt.area || "0").toString().replace(",", ".")) || 0;
       if (typeShort === "LM") {
-        const numericArea = parseFloat((apt.area || "0").toString().replace(",", ".")) || 0;
         totalArea += numericArea;
       }
 
