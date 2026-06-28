@@ -307,6 +307,22 @@ function renderFloorButtons() {
   }
 
   container.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;">${html}</div>`;
+
+  // POPULACJA MOBILE DROPDOWN
+  const mobileSel = document.getElementById("mobile-floor-sel");
+  if (mobileSel) {
+    let optHtml = '<option value="">Wybierz Rzut...</option>';
+    const makeOpt = ({ key, f }) => `<option value="${key}"${currentFloor === key ? ' selected' : ''}>${f.building ? `${f.building} \u2013 ` : ''}${key}</option>`;
+    if (groups.zt.length > 0) optHtml += '<optgroup label="Teren">' + groups.zt.map(makeOpt).join("") + '</optgroup>';
+    if (nadFiltered.length > 0) optHtml += '<optgroup label="Nadziemne">' + nadFiltered.map(makeOpt).join("") + '</optgroup>';
+    if (groups.pod.length > 0) optHtml += '<optgroup label="Podziemne">' + groups.pod.map(makeOpt).join("") + '</optgroup>';
+    mobileSel.innerHTML = optHtml;
+  }
+}
+
+function changeMobileFloor() {
+  const val = document.getElementById("mobile-floor-sel").value;
+  if (val) displayFloor(val);
 }
 
 function loadFloors() {
@@ -336,6 +352,8 @@ function displayFloor(floorName) {
   currentFloor = floorName;
   closePdf();
   document.getElementById("no-floor-msg").style.display = "none";
+  const mobileSel = document.getElementById("mobile-floor-sel");
+  if (mobileSel) mobileSel.value = floorName;
   const img = document.getElementById("plan-img");
   const floorObj = floors[floorName];
 
@@ -1237,11 +1255,20 @@ function toggleMobileView(view) {
   if (!container) return;
   if (view === "map") {
     container.classList.add("mobile-map-active");
+    history.pushState({ mobileModal: true }, "", "#mobile-map");
     setTimeout(() => window.dispatchEvent(new Event("resize")), 100);
   } else {
     container.classList.remove("mobile-map-active");
+    if (location.hash === "#mobile-map") history.back();
   }
 }
+
+window.addEventListener("popstate", (e) => {
+  const container = document.getElementById("main-view");
+  if (container && container.classList.contains("mobile-map-active") && location.hash !== "#mobile-map") {
+    container.classList.remove("mobile-map-active");
+  }
+});
 
 function openPdf(url, aptNumber, typeName) {
   if (typeof toggleMobileView === "function") toggleMobileView("map");

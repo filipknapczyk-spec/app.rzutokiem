@@ -61,11 +61,17 @@
     <div id="main-view">
       <div id="canvas-column">
         <div class="view-controls">
-          <button class="btn-toggle-map mobile-only" onclick="toggleMobileView('table')">
-            ⬅ Wróć do Tabeli
-          </button>
+          <!-- MOBILE MODAL HEADER -->
+          <div class="mobile-modal-header mobile-only" style="display: none; justify-content: space-between; width: 100%; align-items: center;">
+             <select id="mobile-floor-sel" onchange="changeMobileFloor()" style="flex: 1; margin-right: 15px; padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;">
+                <option value="">Wybierz Rzut...</option>
+             </select>
+             <button onclick="toggleMobileView('table')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #333; padding: 0 10px;">✕</button>
+          </div>
+
           <div
             id="nav-elements"
+            class="desktop-only"
             style="
               display: flex;
               align-items: center;
