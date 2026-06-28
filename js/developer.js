@@ -1086,7 +1086,22 @@ async function saveAptData() {
     render();
     renderSvgOnly();
     closeModal();
-    alert("Zapisano!");
+    const statusBar = document.getElementById("save-status-bar");
+    if (statusBar) {
+      const typeStr = currentApt.type === "MP" ? "miejscu postojowym" : currentApt.type === "K" || currentApt.type === "KL" ? "komórce lokatorskiej" : "lokalu";
+      statusBar.textContent = `Zapisano zmiany w ${typeStr} nr ${currentApt.number}`;
+      statusBar.style.backgroundColor = "#d4edda";
+      statusBar.style.color = "#155724";
+      statusBar.style.border = "1px solid #c3e6cb";
+      statusBar.style.display = "block";
+      statusBar.style.opacity = "1";
+      setTimeout(() => {
+        statusBar.style.opacity = "0";
+        setTimeout(() => {
+          statusBar.style.display = "none";
+        }, 300);
+      }, 1000);
+    }
   } catch (err) {
     if (err.message === "Conflict") {
       closeModal();
