@@ -231,7 +231,7 @@
             <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                 <div>
                     <label style="font-size:11px; color:#666;">Grupa:</label><br>
-                    <select id="assign-group" onchange="toggleAssignBuilding()" style="padding:4px; font-size:12px;">
+                    <select id="assign-group" onchange="toggleAssignBuilding(); saveFloorAssignment();" style="padding:4px; font-size:12px;">
                         <option value="zt">Zagospodarowanie terenu</option>
                         <option value="nad">Kondygnacje nadziemne</option>
                         <option value="pod">Kondygnacje podziemne</option>
@@ -239,11 +239,11 @@
                 </div>
                 <div id="assign-building-row">
                     <label style="font-size:11px; color:#666;">Budynek:</label><br>
-                    <input type="text" id="assign-building" list="assign-building-list" style="padding:4px; font-size:12px; border:1px solid #ccc; border-radius:3px; width:150px;" placeholder="np. Budynek 1">
+                    <input type="text" id="assign-building" list="assign-building-list" style="padding:4px; font-size:12px; border:1px solid #ccc; border-radius:3px; width:150px;" placeholder="np. Budynek 1" onblur="saveFloorAssignment()" onkeydown="if(event.key === 'Enter') { this.blur(); }">
                     <datalist id="assign-building-list"></datalist>
                 </div>
                 <div style="align-self:flex-end;">
-                    <button class="btn-tool btn-save" style="padding:5px 12px; font-size:12px;" onclick="saveFloorAssignment()">Zapisz przypisanie</button>
+                    <span id="assign-save-status" style="font-size:11px; color:#28a745; display:none; margin-left:10px; font-weight:bold;">Zapisano ✓</span>
                 </div>
             </div>
         </div>
@@ -494,15 +494,28 @@
         const inv = getCurrentInv();
         const floor = document.getElementById('floor-sel').value;
         if (!floor || !inv) return;
+        
         const group = document.getElementById('assign-group').value;
         const building = (group === 'nad') ? document.getElementById('assign-building').value.trim() : null;
+        
         const floors = getFloors(inv);
         if (floors[floor]) {
+            if (floors[floor].group === group && floors[floor].building === building) return; // bez zmian
             floors[floor].group = group;
             floors[floor].building = building || null;
         }
+        
         await saveDB();
-        alert('Przypisanie zapisane!');
+        
+        // Aktualizacja listy datalist dla reszty interfejsu (uwzględnia nowe oraz odrzuca nieużywane już budynki)
+        const dl = document.getElementById('assign-building-list');
+        if (dl) dl.innerHTML = getBuildingList(inv).map(b => `<option value="${b}">`).join('');
+        
+        const status = document.getElementById('assign-save-status');
+        if (status) {
+            status.style.display = 'inline';
+            setTimeout(() => { status.style.display = 'none'; }, 2000);
+        }
     }
 
     async function replaceFloorImage() {
