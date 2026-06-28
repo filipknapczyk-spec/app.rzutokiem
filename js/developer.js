@@ -284,29 +284,31 @@ function renderFloorButtons() {
   };
 
   let html = "";
+  const rowStyle = 'display:flex;align-items:center;gap:4px;flex-wrap:wrap;';
+  const spanStyle = 'font-size:11px;color:#64748b;white-space:nowrap;font-weight:600;width:75px;text-align:right;padding-right:8px;';
 
   if (groups.zt.length > 0) {
-    html += `<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">`;
-    html += `<span style="font-size:11px;color:#64748b;white-space:nowrap;font-weight:600;">Teren:</span>`;
-    html += groups.zt.map(makeBtn).join("");
-    html += "</div>";
+    html += `<div style="${rowStyle}"><span style="${spanStyle}">Teren:</span>` + groups.zt.map(makeBtn).join("") + `</div>`;
   }
 
   if (nadFiltered.length > 0) {
-    html += `<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">`;
-    html += `<span style="font-size:11px;color:#64748b;white-space:nowrap;font-weight:600;">Nadziemne:</span>`;
-    html += nadFiltered.map(makeBtn).join("");
-    html += "</div>";
+    const bGroups = {};
+    nadFiltered.forEach(item => {
+       const bName = item.f.building || "Budynek";
+       if(!bGroups[bName]) bGroups[bName] = [];
+       bGroups[bName].push(item);
+    });
+    
+    Object.keys(bGroups).sort().forEach(bName => {
+       html += `<div style="${rowStyle}"><span style="${spanStyle}">${bName}:</span>` + bGroups[bName].map(makeBtn).join("") + `</div>`;
+    });
   }
 
   if (groups.pod.length > 0) {
-    html += `<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">`;
-    html += `<span style="font-size:11px;color:#64748b;white-space:nowrap;font-weight:600;">Podziemne:</span>`;
-    html += groups.pod.map(makeBtn).join("");
-    html += "</div>";
+    html += `<div style="${rowStyle}"><span style="${spanStyle}">Podziemne:</span>` + groups.pod.map(makeBtn).join("") + `</div>`;
   }
 
-  container.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;">${html}</div>`;
+  container.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;">${html}</div>`;
 
   // POPULACJA MOBILE DROPDOWN
   const mobileSel = document.getElementById("mobile-floor-sel");
