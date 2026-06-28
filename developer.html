@@ -51,10 +51,10 @@
 
       <select
         id="build-sel"
-        onchange="changeBuilding()"
-        style="width: 150px; padding: 6px"
+        onchange="filterByBuilding()"
+        style="width: 160px; padding: 6px"
       >
-        <option value="">Wybierz Budynek</option>
+        <option value="all">Wszystkie budynki</option>
       </select>
     </div>
 
@@ -70,9 +70,6 @@
               overflow: hidden;
             "
           >
-            <span class="filter-label" style="white-space: nowrap"
-              >Piętro:</span
-            >
             <div id="floor-buttons"></div>
           </div>
 

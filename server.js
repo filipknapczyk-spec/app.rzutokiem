@@ -200,38 +200,32 @@ app.use(express.static(__dirname));
 // --- MULTER (KONFIGURACJA UPLOADU) ---
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    let { devId, investId, buildingId, type } = req.body;
+    let { devId, investId, buildingId, type, floorId } = req.body;
     if (req.user.role !== "superadmin") devId = req.user.devId;
-    if (!devId || !investId || !buildingId)
-      return cb(new Error("Brak danych"), null);
+    if (!devId || !investId) return cb(new Error("Brak danych"), null);
     const safeDevId = sanitize(devId);
     const safeInvestId = sanitize(investId);
-    const safeBuildingId = sanitize(buildingId);
-    let { aptNumber } = req.body;
-    const folderMap = {
-      km: "cards_km",
-      ki: "cards_ki",
-      kz: "KZ",
-      contract: "contracts",
-    };
-    let subFolder = type === "floorPlan" ? "plans" : folderMap[type] || "misc";
-    if (type === "kz") subFolder = `KZ/mieszkanie_${sanitize(aptNumber)}`;
-    const dir = path.join(
-      __dirname,
-      "uploads",
-      safeDevId,
-      safeInvestId,
-      safeBuildingId,
-      subFolder,
-    );
+    let aptNumber = req.body.aptNumber;
+    const folderMap = { km: "cards_km", ki: "cards_ki", kz: "KZ", contract: "contracts" };
+
+    let dir;
+    if (type === "floorPlan") {
+      // Nowa architektura: rzuty trafiają do _floors/ na poziomie inwestycji
+      dir = path.join(__dirname, "uploads", safeDevId, safeInvestId, "_floors");
+    } else {
+      // Pliki lokali (km, ki, kz, contract) — nadal per-budynek
+      if (!buildingId) return cb(new Error("Brak buildingId"), null);
+      const safeBuildingId = sanitize(buildingId);
+      let subFolder = folderMap[type] || "misc";
+      if (type === "kz") subFolder = `KZ/mieszkanie_${sanitize(aptNumber)}`;
+      dir = path.join(__dirname, "uploads", safeDevId, safeInvestId, safeBuildingId, subFolder);
+    }
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
   filename: (req, file, cb) => {
     const { type, floorName, aptNumber } = req.body;
-    file.originalname = Buffer.from(file.originalname, "latin1").toString(
-      "utf8",
-    );
+    file.originalname = Buffer.from(file.originalname, "latin1").toString("utf8");
     if (type === "floorPlan") {
       cb(null, `${sanitize(floorName)}.jpg`);
     } else if (type === "contract" || type === "kz") {
@@ -1043,44 +1037,59 @@ app.post("/api/rename-floor", checkAuth, csrfProtection, (req, res) => {
   let { devId, investId, buildingId, oldName, newName } = req.body;
   if (req.user.role !== "superadmin") devId = req.user.devId;
   investId = sanitize(investId);
-  buildingId = sanitize(buildingId);
   oldName = sanitize(oldName);
   newName = sanitize(newName);
-  const dir = path.join(
-    __dirname,
-    "uploads",
-    devId,
-    investId,
-    buildingId,
-    "plans",
-  );
-  const oldPath = path.join(dir, `${oldName}.jpg`);
-  const newPath = path.join(dir, `${newName}.jpg`);
+
+  // Nowa ścieżka: _floors/
+  const floorsDir = path.join(__dirname, "uploads", devId, investId, "_floors");
+  const newPath = path.join(floorsDir, `${newName}.jpg`);
+  const oldPath = path.join(floorsDir, `${oldName}.jpg`);
+
   if (fs.existsSync(oldPath)) {
     fs.rename(oldPath, newPath, (err) => {
       if (err) return res.status(500).send("Błąd");
       res.send("OK");
     });
-  } else res.send("OK");
+  } else {
+    // Fallback: stara ścieżka building/plans/
+    if (buildingId) {
+      buildingId = sanitize(buildingId);
+      const oldLegacyPath = path.join(__dirname, "uploads", devId, investId, buildingId, "plans", `${oldName}.jpg`);
+      const newLegacyPath = path.join(__dirname, "uploads", devId, investId, buildingId, "plans", `${newName}.jpg`);
+      if (fs.existsSync(oldLegacyPath)) {
+        fs.rename(oldLegacyPath, newLegacyPath, (err) => {
+          if (err) return res.status(500).send("Błąd");
+          res.send("OK");
+        });
+        return;
+      }
+    }
+    res.send("OK");
+  }
 });
 
 app.post("/api/delete-floor", checkAuth, csrfProtection, (req, res) => {
   let { devId, investId, buildingId, floorName } = req.body;
   if (req.user.role !== "superadmin") devId = req.user.devId;
   investId = sanitize(investId);
-  buildingId = sanitize(buildingId);
   floorName = sanitize(floorName);
-  const targetPath = path.join(
-    __dirname,
-    "uploads",
-    devId,
-    investId,
-    buildingId,
-    "plans",
-    `${floorName}.jpg`,
-  );
-  if (fs.existsSync(targetPath)) fs.unlink(targetPath, () => res.send("OK"));
-  else res.send("OK");
+
+  // Nowa ścieżka: _floors/
+  const newPath = path.join(__dirname, "uploads", devId, investId, "_floors", `${floorName}.jpg`);
+  if (fs.existsSync(newPath)) {
+    fs.unlink(newPath, () => res.send("OK"));
+    return;
+  }
+  // Fallback: stara ścieżka
+  if (buildingId) {
+    buildingId = sanitize(buildingId);
+    const legacyPath = path.join(__dirname, "uploads", devId, investId, buildingId, "plans", `${floorName}.jpg`);
+    if (fs.existsSync(legacyPath)) {
+      fs.unlink(legacyPath, () => res.send("OK"));
+      return;
+    }
+  }
+  res.send("OK");
 });
 
 app.post(
@@ -1091,27 +1100,67 @@ app.post(
     let { devId, investId, buildingId, sourceFloor, newFloor } = req.body;
     if (req.user.role !== "superadmin") devId = req.user.devId;
     investId = sanitize(investId);
-    buildingId = sanitize(buildingId);
     sourceFloor = sanitize(sourceFloor);
     newFloor = sanitize(newFloor);
-    const plansDir = path.join(
-      __dirname,
-      "uploads",
-      devId,
-      investId,
-      buildingId,
-      "plans",
-    );
-    const srcPath = path.join(plansDir, `${sourceFloor}.jpg`);
-    const destPath = path.join(plansDir, `${newFloor}.jpg`);
-    if (!fs.existsSync(srcPath))
+
+    const floorsDir = path.join(__dirname, "uploads", devId, investId, "_floors");
+    const srcPath = path.join(floorsDir, `${sourceFloor}.jpg`);
+    const destPath = path.join(floorsDir, `${newFloor}.jpg`);
+
+    const tryCopy = (src, dest) => {
+      if (!fs.existsSync(dest.replace(`${newFloor}.jpg`, ""))) {
+        fs.mkdirSync(dest.replace(`${newFloor}.jpg`, ""), { recursive: true });
+      }
+      fs.copyFile(src, dest, (err) => {
+        if (err) return res.status(500).send("Błąd serwera podczas kopiowania");
+        res.send("OK");
+      });
+    };
+
+    if (fs.existsSync(srcPath)) {
+      tryCopy(srcPath, destPath);
+    } else if (buildingId) {
+      // Fallback: stara ścieżka
+      buildingId = sanitize(buildingId);
+      const legacyDir = path.join(__dirname, "uploads", devId, investId, buildingId, "plans");
+      const legacySrc = path.join(legacyDir, `${sourceFloor}.jpg`);
+      if (fs.existsSync(legacySrc)) {
+        if (!fs.existsSync(floorsDir)) fs.mkdirSync(floorsDir, { recursive: true });
+        tryCopy(legacySrc, destPath);
+      } else {
+        return res.status(404).send("Plik źródłowy nie istnieje");
+      }
+    } else {
       return res.status(404).send("Plik źródłowy nie istnieje");
-    fs.copyFile(srcPath, destPath, (err) => {
-      if (err) return res.status(500).send("Błąd serwera podczas kopiowania");
-      res.send("OK");
-    });
+    }
   },
 );
+
+// Migracja pliku rzutu ze starej ścieżki (building/plans/) do nowej (_floors/)
+app.post("/api/migrate-floor-file", checkAuth, csrfProtection, (req, res) => {
+  let { devId, investId, buildingId, floorName } = req.body;
+  if (req.user.role !== "superadmin") devId = req.user.devId;
+  investId = sanitize(investId);
+  buildingId = sanitize(buildingId);
+  floorName = sanitize(floorName);
+
+  const srcPath = path.join(__dirname, "uploads", devId, investId, buildingId, "plans", `${floorName}.jpg`);
+  const destDir = path.join(__dirname, "uploads", devId, investId, "_floors");
+  const destPath = path.join(destDir, `${floorName}.jpg`);
+
+  if (!fs.existsSync(srcPath)) {
+    return res.json({ success: true, skipped: true, reason: "source_not_found" });
+  }
+  if (fs.existsSync(destPath)) {
+    return res.json({ success: true, skipped: true, reason: "already_exists" });
+  }
+
+  if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+  fs.copyFile(srcPath, destPath, (err) => {
+    if (err) return res.status(500).json({ error: "Błąd kopiowania pliku" });
+    res.json({ success: true });
+  });
+});
 
 app.post("/api/delete-file", checkAuth, csrfProtection, (req, res) => {
   let { devId, investId, buildingId, type, aptNumber, filename } = req.body;

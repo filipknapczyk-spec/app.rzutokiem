@@ -21,7 +21,8 @@ function renderKzList() {
     currentApt.kzFiles.forEach((fileName) => {
       const pill = document.createElement("div");
       pill.className = "file-pill";
-      const url = `/uploads/${devId}/${currentInv}/${currentBuild}/KZ/mieszkanie_${currentApt.number}/${fileName}`;
+      const aptBuilding = getAptBuilding();
+      const url = `/uploads/${devId}/${currentInv}/${aptBuilding}/KZ/mieszkanie_${currentApt.number}/${fileName}`;
       pill.innerHTML = `
                 <span class="file-name" onclick="openPdf('${url}', '${currentApt.number}', 'KZ')" style="cursor:pointer; color:#007bff;" title="Otworz plik">PDF ${fileName}</span>
                 <button class="btn-remove-file" onclick="deleteFile('kz', '${fileName}')" title="Usuń plik">✖</button>
@@ -55,7 +56,8 @@ function renderContractList() {
     currentApt.contracts.forEach((fileName) => {
       const pill = document.createElement("div");
       pill.className = "file-pill";
-      const url = `/uploads/${devId}/${currentInv}/${currentBuild}/contracts/${encodeURIComponent(fileName)}`;
+      const aptBuilding = getAptBuilding();
+      const url = `/uploads/${devId}/${currentInv}/${aptBuilding}/contracts/${encodeURIComponent(fileName)}`;
       pill.innerHTML = `
             <span class="file-name" onclick="openPdf('${url}', '${currentApt.number}', 'Umowa')" style="cursor:pointer; color:#007bff;" title="Otworz plik">PDF ${fileName}</span>
             <button class="btn-remove-file" onclick="deleteContractFile('${fileName}')" title="Usuń plik">✖</button>
@@ -88,7 +90,7 @@ async function uploadKzFiles() {
     const fd = new FormData();
     fd.append("devId", devId);
     fd.append("investId", currentInv);
-    fd.append("buildingId", currentBuild);
+    fd.append("buildingId", getAptBuilding());
     fd.append("aptNumber", currentApt.number);
     fd.append("type", "kz");
     fd.append("file", f);
@@ -115,6 +117,11 @@ let db = { investments: {} },
   currentBuild = "",
   currentFloor = "",
   currentPdfUrl = "";
+
+function getAptBuilding() {
+  const floors = db.investments[currentInv]?._floors;
+  return (floors && floors[currentFloor]?.building) ? floors[currentFloor].building : (currentBuild === "all" ? "" : currentBuild);
+}
 
 /**
  * Aktualizuje wskaznik statusu zapisu w headerze.
@@ -185,100 +192,132 @@ async function init() {
 function changeInvestment() {
   currentInv = document.getElementById("inv-sel").value;
   currentBuild = "";
+  currentFloor = "";
   closePdf();
-  document.getElementById("build-sel").innerHTML =
-    '<option value="">Wybierz Budynek</option>';
   document.getElementById("floor-buttons").innerHTML = "";
   document.getElementById("no-floor-msg").style.display = "block";
   document.getElementById("map-cont").style.display = "none";
   document.getElementById("zoom-controls").style.display = "none";
-  loadBuildings();
-}
 
-function loadBuildings() {
-  if (!currentInv || !db.investments[currentInv]) return;
-  const bKeys = Object.keys(db.investments[currentInv]);
-  const sel = document.getElementById("build-sel");
-  sel.innerHTML =
-    '<option value="">Wybierz Budynek</option>' +
-    bKeys.map((k) => `<option value="${k}">${k}</option>`).join("");
-  if (bKeys.length === 1) {
-    sel.value = bKeys[0];
-    changeBuilding();
+  if (!currentInv || !db.investments[currentInv]) {
+    document.getElementById("build-sel").innerHTML = '<option value="all">Wszystkie budynki</option>';
+    return;
   }
-}
 
-function changeBuilding() {
-  currentBuild = document.getElementById("build-sel").value;
-  closePdf();
+  // Zbierz unikalne budynki z _floors
+  const floors = db.investments[currentInv]._floors || {};
+  const buildings = new Set();
+  Object.values(floors).forEach(f => { if (f.building) buildings.add(f.building); });
+
+  const buildSel = document.getElementById("build-sel");
+  buildSel.innerHTML = '<option value="all">Wszystkie budynki</option>' +
+    Array.from(buildings).sort().map(b => `<option value="${b}">${b}</option>`).join("");
+
   updateRoomFilter();
   updateFloorFilter();
-  loadFloors();
+  renderFloorButtons();
+
+  // Auto-wyświetl pierwszy rzut
+  const floorKeys = Object.keys(floors);
+  if (floorKeys.length > 0) displayFloor(floorKeys[0]);
+  render();
+}
+
+function filterByBuilding() {
+  currentBuild = document.getElementById("build-sel").value;
+  renderFloorButtons();
+  render();
 }
 
 function updateRoomFilter() {
   const roomSel = document.getElementById("filter-rooms");
   const rooms = new Set();
-  if (currentInv && currentBuild && db.investments[currentInv][currentBuild]) {
-    Object.values(db.investments[currentInv][currentBuild]).forEach((f) => {
-      f.apartments.forEach((a) => {
-        if (a.rooms) rooms.add(a.rooms);
-      });
+  if (currentInv && db.investments[currentInv]?._floors) {
+    Object.values(db.investments[currentInv]._floors).forEach(f => {
+      (f.apartments || []).forEach(a => { if (a.rooms) rooms.add(a.rooms); });
     });
   }
-  roomSel.innerHTML =
-    '<option value="all">Wszystkie</option>' +
-    Array.from(rooms)
-      .sort((a, b) => a - b)
-      .map((r) => `<option value="${r}">${r}</option>`)
-      .join("");
+  roomSel.innerHTML = '<option value="all">Wszystkie</option>' +
+    Array.from(rooms).sort((a,b) => a-b).map(r => `<option value="${r}">${r}</option>`).join("");
 }
 
 function updateFloorFilter() {
   const floorSel = document.getElementById("filter-floor");
-  if (
-    !currentInv ||
-    !currentBuild ||
-    !db.investments[currentInv][currentBuild]
-  ) {
+  if (!currentInv || !db.investments[currentInv]?._floors) {
     floorSel.innerHTML = '<option value="all">Wszystkie</option>';
     return;
   }
-  const floors = Object.keys(db.investments[currentInv][currentBuild]);
-  floorSel.innerHTML =
-    '<option value="all">Wszystkie</option>' +
-    floors.map((f) => `<option value="${f}">${f}</option>`).join("");
+  const floors = Object.keys(db.investments[currentInv]._floors);
+  floorSel.innerHTML = '<option value="all">Wszystkie</option>' +
+    floors.map(f => `<option value="${f}">${f}</option>`).join("");
+}
+
+function renderFloorButtons() {
+  const container = document.getElementById("floor-buttons");
+  if (!currentInv || !db.investments[currentInv]?._floors) {
+    container.innerHTML = "";
+    return;
+  }
+  const floors = db.investments[currentInv]._floors;
+  const buildFilter = document.getElementById("build-sel")?.value || "all";
+
+  // Podziel rzuty na 3 grupy
+  const groups = { zt: [], nad: [], pod: [] };
+  Object.entries(floors).forEach(([key, f]) => {
+    const g = f.group || "nad";
+    if (groups[g]) groups[g].push({ key, f });
+  });
+
+  // Filtrowanie: nadziemne filtrujemy po budynku, ZT i pod zawsze widoczne
+  const nadFiltered = groups.nad.filter(({ f }) =>
+    buildFilter === "all" || f.building === buildFilter
+  );
+
+  const makeBtn = ({ key, f }) => {
+    const label = f.building ? `${f.building} \u2013 ${key}` : key;
+    return `<button class="floor-btn${currentFloor === key ? " active" : ""}" onclick="selectFloorBtn(this, '${key}')" title="${label}">${label}</button>`;
+  };
+
+  let html = "";
+
+  if (groups.zt.length > 0) {
+    html += `<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">`;
+    html += `<span style="font-size:11px;color:#64748b;white-space:nowrap;font-weight:600;">Teren:</span>`;
+    html += groups.zt.map(makeBtn).join("");
+    html += "</div>";
+  }
+
+  if (nadFiltered.length > 0) {
+    html += `<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">`;
+    html += `<span style="font-size:11px;color:#64748b;white-space:nowrap;font-weight:600;">Nadziemne:</span>`;
+    html += nadFiltered.map(makeBtn).join("");
+    html += "</div>";
+  }
+
+  if (groups.pod.length > 0) {
+    html += `<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">`;
+    html += `<span style="font-size:11px;color:#64748b;white-space:nowrap;font-weight:600;">Podziemne:</span>`;
+    html += groups.pod.map(makeBtn).join("");
+    html += "</div>";
+  }
+
+  container.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;">${html}</div>`;
 }
 
 function loadFloors() {
-  if (!currentInv || !currentBuild) {
-    document.getElementById("floor-buttons").innerHTML = "";
+  renderFloorButtons();
+  const floors = db.investments[currentInv]?._floors || {};
+  const floorKeys = Object.keys(floors);
+  if (floorKeys.length > 0) displayFloor(floorKeys[0]);
+  else {
     document.getElementById("map-cont").style.display = "none";
-    document.getElementById("zoom-controls").style.display = "none";
     document.getElementById("no-floor-msg").style.display = "block";
     render();
-    return;
   }
-  const floors = Object.keys(db.investments[currentInv][currentBuild] || {});
-  renderFloorButtons(floors, floors[0] || "");
-  if (floors.length > 0) displayFloor(floors[0]);
-  render();
-}
-
-function renderFloorButtons(floors, activeFloor) {
-  const container = document.getElementById("floor-buttons");
-  container.innerHTML = floors
-    .map(
-      (f) =>
-        `<button class="floor-btn${f === activeFloor ? " active" : ""}" onclick="selectFloorBtn(this, '${f}')" title="${f}">${f}</button>`,
-    )
-    .join("");
 }
 
 function selectFloorBtn(btn, floorName) {
-  document
-    .querySelectorAll(".floor-btn")
-    .forEach((b) => b.classList.remove("active"));
+  document.querySelectorAll(".floor-btn").forEach(b => b.classList.remove("active"));
   btn.classList.add("active");
   displayFloor(floorName);
   const h = document.getElementById(`header-floor-${floorName}`);
@@ -286,21 +325,37 @@ function selectFloorBtn(btn, floorName) {
 }
 
 function displayFloor(floorName) {
-  if (!currentInv || !currentBuild || !floorName) return;
+  if (!currentInv || !floorName) return;
+  const floors = db.investments[currentInv]?._floors;
+  if (!floors || !floors[floorName]) return;
   currentFloor = floorName;
   closePdf();
   document.getElementById("no-floor-msg").style.display = "none";
   const img = document.getElementById("plan-img");
-  img.src = `/uploads/${devId}/${currentInv}/${currentBuild}/plans/${floorName}.jpg?t=${Date.now()}`;
+  const floorObj = floors[floorName];
+
+  // Nowa ścieżka _floors/ z fallbackiem na stare ścieżki
+  const newSrc = `/uploads/${devId}/${currentInv}/_floors/${encodeURIComponent(floorName)}.jpg?t=${Date.now()}`;
+  const legacySrc = floorObj?.building ? `/uploads/${devId}/${currentInv}/${encodeURIComponent(floorObj.building)}/plans/${encodeURIComponent(floorName)}.jpg?t=${Date.now()}` : null;
+
+  img.onerror = () => {
+    if (legacySrc && img.src.indexOf("_floors") !== -1) {
+      img.src = legacySrc;
+    } else {
+      document.getElementById("map-cont").style.display = "block";
+      document.getElementById("zoom-controls").style.display = "flex";
+      resetZoom();
+      renderSvgOnly();
+    }
+  };
   img.onload = () => {
     document.getElementById("map-cont").style.display = "block";
     document.getElementById("zoom-controls").style.display = "flex";
     resetZoom();
-    document
-      .getElementById("canvas")
-      .setAttribute("viewBox", `0 0 ${img.naturalWidth} ${img.naturalHeight}`);
+    document.getElementById("canvas").setAttribute("viewBox", `0 0 ${img.naturalWidth} ${img.naturalHeight}`);
     renderSvgOnly();
   };
+  img.src = newSrc;
 }
 
 function getSafeId(num) {
@@ -310,73 +365,55 @@ function getSafeId(num) {
 function renderSvgOnly() {
   const svg = document.getElementById("canvas");
   svg.innerHTML = "";
-  if (!db.investments[currentInv]?.[currentBuild]?.[currentFloor]) return;
-  db.investments[currentInv][currentBuild][currentFloor].apartments.forEach(
-    (apt) => {
-      const status = (apt.status || "wolne").toLowerCase();
-      let typeShort = apt.type || "LM";
-      if (typeShort === "K") typeShort = "KL";
-      const safeNum = getSafeId(typeShort + "-" + apt.number);
-      const poly = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "polygon",
-      );
-      poly.id = `poly-${safeNum}`;
-      poly.setAttribute("points", apt.points);
-      poly.setAttribute("class", "status-" + status);
-      poly.onmouseenter = () => {
-        document
-          .getElementById(`row-${safeNum}`)
-          ?.classList.add("highlight-row");
-        document
-          .getElementById(`row-info-${safeNum}`)
-          ?.classList.add("highlight-row");
-      };
-      poly.onmouseleave = () => {
-        document
-          .getElementById(`row-${safeNum}`)
-          ?.classList.remove("highlight-row");
-        document
-          .getElementById(`row-info-${safeNum}`)
-          ?.classList.remove("highlight-row");
-      };
-      poly.onclick = () => openModal(apt);
-      svg.appendChild(poly);
-    },
-  );
+  const floors = db.investments[currentInv]?._floors;
+  if (!floors || !floors[currentFloor]) return;
+  (floors[currentFloor].apartments || []).forEach((apt) => {
+    const status = (apt.status || "wolne").toLowerCase();
+    let typeShort = apt.type || "LM";
+    if (typeShort === "K") typeShort = "KL";
+    const safeNum = getSafeId(typeShort + "-" + apt.number);
+    const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+    poly.id = `poly-${safeNum}`;
+    poly.setAttribute("points", apt.points);
+    poly.setAttribute("class", "status-" + status);
+    poly.onmouseenter = () => { document.getElementById(`row-${safeNum}`)?.classList.add("highlight-row"); document.getElementById(`row-info-${safeNum}`)?.classList.add("highlight-row"); };
+    poly.onmouseleave = () => { document.getElementById(`row-${safeNum}`)?.classList.remove("highlight-row"); document.getElementById(`row-info-${safeNum}`)?.classList.remove("highlight-row"); };
+    poly.onclick = () => openModal(apt);
+    svg.appendChild(poly);
+  });
 }
 
 function render() {
-  if (
-    !currentInv ||
-    !currentBuild ||
-    !db.investments[currentInv]?.[currentBuild]
-  )
-    return;
+  const floors = db.investments[currentInv]?._floors;
+  if (!currentInv || !floors) return;
+
   const fStatus = document.getElementById("filter-status").value.toLowerCase();
   const fType = document.getElementById("filter-type").value;
   const fRooms = document.getElementById("filter-rooms").value;
   const fFloor = document.getElementById("filter-floor").value;
   const fSearch = document.getElementById("search-client").value.toLowerCase();
 
-  let totalCount = 0,
-    totalArea = 0;
+  let totalCount = 0, totalArea = 0;
 
+  // Id -> numer dla wyświetlania MP/K
   const idToNumber = {};
-  Object.keys(db.investments[currentInv]).forEach((b) => {
-    Object.keys(db.investments[currentInv][b]).forEach((f) => {
-      db.investments[currentInv][b][f].apartments.forEach((a) => {
-        idToNumber[a.id] = a.number;
-      });
-    });
+  Object.values(floors).forEach(fData => {
+    (fData.apartments || []).forEach(a => { idToNumber[a.id] = a.number; });
   });
 
   const tbody = document.getElementById("apt-table-body");
   tbody.innerHTML = "";
 
-  Object.keys(db.investments[currentInv][currentBuild]).forEach((floorName) => {
-    if (fFloor !== "all" && fFloor !== floorName) return;
-    const floorData = db.investments[currentInv][currentBuild][floorName];
+  // Filtruj rzuty: jeśli wybrany konkretny budynek, pokaż tylko jego nadziemne (i zawsze ZT/pod)
+  const buildFilter = document.getElementById("build-sel")?.value || "all";
+  const floorEntries = Object.entries(floors).filter(([fId, fData]) => {
+    if (fFloor !== "all" && fFloor !== fId) return false;
+    if (buildFilter === "all") return true;
+    if (fData.group === "nad") return fData.building === buildFilter;
+    return true; // ZT i pod zawsze widoczne
+  });
+
+  floorEntries.forEach(([floorName, floorData]) => {
     const filteredApts = floorData.apartments
       .filter((apt) => {
         const sM =
@@ -428,7 +465,9 @@ function render() {
           }
         }
       }
-      const basePath = `/uploads/${devId}/${currentInv}/${currentBuild}`;
+      // Pliki per-budynek (KM/KI/KZ/umowy) — ścieżka z pola building rzutu
+      const aptBuilding = floorData.building || currentBuild || "";
+      const basePath = `/uploads/${devId}/${currentInv}/${aptBuilding}`;
       const ts = Date.now();
       const kmUrl = `${basePath}/cards_km/apt_${apt.number}.pdf?t=${ts}`;
       const kiUrl = `${basePath}/cards_ki/apt_${apt.number}.pdf?t=${ts}`;
@@ -857,7 +896,7 @@ async function saveAptData() {
     const fd = new FormData();
     fd.append("devId", devId);
     fd.append("investId", currentInv);
-    fd.append("buildingId", currentBuild);
+    fd.append("buildingId", getAptBuilding());
     fd.append("aptNumber", currentApt.number);
     fd.append("type", type);
     fd.append("file", f);
@@ -885,7 +924,7 @@ async function saveAptData() {
       const fd = new FormData();
       fd.append("devId", devId);
       fd.append("investId", currentInv);
-      fd.append("buildingId", currentBuild);
+      fd.append("buildingId", getAptBuilding());
       fd.append("aptNumber", currentApt.number);
       fd.append("type", "contract");
       fd.append("file", f);
@@ -975,7 +1014,7 @@ async function saveApartmentsOnServer(apts) {
     },
     body: JSON.stringify({
       investId: currentInv,
-      buildingId: currentBuild,
+      buildingId: getAptBuilding(),
       floorId: currentFloor,
       aptsToSave: apts
     }),
@@ -998,13 +1037,10 @@ async function saveApartmentsOnServer(apts) {
   if (result.updatedVersions) {
     Object.keys(result.updatedVersions).forEach(aptId => {
       const ver = result.updatedVersions[aptId];
-      Object.keys(db.investments[currentInv]).forEach(b => {
-        Object.keys(db.investments[currentInv][b]).forEach(f => {
-          const foundApt = db.investments[currentInv][b][f].apartments.find(a => a.id === aptId);
-          if (foundApt) {
-            foundApt.version = ver;
-          }
-        });
+      const floors = db.investments[currentInv]?._floors || {};
+      Object.values(floors).forEach(f => {
+        const foundApt = (f.apartments || []).find(a => a.id === aptId);
+        if (foundApt) foundApt.version = ver;
       });
     });
   }
@@ -1023,7 +1059,7 @@ async function deleteContractFile(fileName) {
       body: JSON.stringify({
         devId,
         investId: currentInv,
-        buildingId: currentBuild,
+        buildingId: getAptBuilding(),
         type: "contract",
         aptNumber: currentApt.number,
         filename: fileName,
@@ -1073,7 +1109,7 @@ async function deleteFile(type, fileName) {
       body: JSON.stringify({
         devId,
         investId: currentInv,
-        buildingId: currentBuild,
+        buildingId: getAptBuilding(),
         type,
         aptNumber: currentApt.number,
         filename: fileName || "",
