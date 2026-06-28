@@ -698,6 +698,33 @@ app.get("/api/data/:devId", checkAuth, async (req, res) => {
     { investments: {}, investmentsMeta: {}, deletedInvestments: [] },
     true  // withVersion=true → zwraca {data, version}
   );
+
+  // AUTO-MIGRACJA dla starych środowisk bez _floors
+  if (db && db.investments) {
+    Object.keys(db.investments).forEach(inv => {
+      let iData = db.investments[inv];
+      if (!iData._floors) iData._floors = {};
+      Object.keys(iData).forEach(key => {
+        if (key.startsWith("_") || key === "globalConfig" || key === "deleted" || key === "defaultZoom") return;
+        let bObj = iData[key];
+        if (typeof bObj === "object" && bObj !== null) {
+          Object.keys(bObj).forEach(floorName => {
+            let fObj = bObj[floorName];
+            // w starych budynkach rzuty to obiekty z tabelą "apartments" (lub listą pdf etc)
+            if (typeof fObj === "object" && fObj !== null) {
+              if (!iData._floors[floorName]) {
+                iData._floors[floorName] = fObj;
+                fObj.building = key; // zachowanie nazwy budynku
+                fObj.group = "nad";  // stary domyślny
+              }
+            }
+          });
+          delete iData[key];
+        }
+      });
+    });
+  }
+
   // _dbVersion trafia do frontendu – przechowywany i odsyłany przy zapisie
   res.json({ ...db, _dbVersion: version });
 });
