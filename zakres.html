@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zakres projektowy â€” Architektura dialogu</title>
+    <meta name="description" content="ZarzÄ…dzanie zakresami projektowymi â€” plansza zagospodarowania, polilinie, podzakresy robĂłt.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', 'Segoe UI', sans-serif; background: #0f1117; min-height: 100vh; color: #f1f5f9; }
+
+        .bg-glow {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background:
+                radial-gradient(ellipse 60% 50% at 5% 20%, rgba(124,58,237,0.1) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 40% at 95% 80%, rgba(79,70,229,0.08) 0%, transparent 60%);
+        }
+
+        /* HEADER */
+        .header {
+            height: 64px; position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; border-bottom: 1px solid rgba(255,255,255,0.06);
+            background: rgba(15,17,23,0.9); backdrop-filter: blur(12px);
+        }
+        .header-left { display: flex; align-items: center; gap: 14px; }
+        .header-icon { width: 32px; height: 32px; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .header-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .header-title { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+        .header-sep { color: #334155; }
+        .header-page { font-size: 13px; color: #a78bfa; font-weight: 600; }
+        .btn-back { display: flex; align-items: center; gap: 6px; padding: 6px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #94a3b8; font-size: 12px; font-weight: 500; text-decoration: none; transition: all 0.2s; }
+        .btn-back:hover { background: rgba(255,255,255,0.1); color: #f1f5f9; }
+        .header-right { display: flex; align-items: center; gap: 10px; }
+        .user-avatar { width: 32px; height: 32px; background: linear-gradient(135deg, #7c3aed, #4f46e5); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+        .save-indicator { font-size: 11px; color: #475569; transition: color 0.3s; }
+        .save-indicator.saving { color: #a78bfa; }
+        .save-indicator.saved { color: #10b981; }
+
+        /* LAYOUT */
+        .app-layout {
+            position: fixed; top: 64px; left: 0; right: 0; bottom: 0;
+            display: flex; z-index: 1;
+        }
+
+        /* LEFT PANEL */
+        .panel-left {
+            width: 442px; min-width: 220px;
+            background: rgba(15,17,23,0.97);
+            border-right: none;
+            display: flex; flex-direction: column;
+            overflow: hidden; position: relative; flex-shrink: 0;
+        }
+        .panel-left-top {
+            padding: 14px 14px 0;
+            flex-shrink: 0;
+        }
+        .invest-select {
+            width: 100%; padding: 9px 12px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 9px; color: #f1f5f9; font-size: 13px; font-family: inherit;
+            outline: none; transition: border-color 0.2s; cursor: pointer; margin-bottom: 10px;
+        }
+        .invest-select:focus { border-color: rgba(124,58,237,0.5); }
+        .invest-select option { background: #1a1d2e; }
+
+        .board-section { margin-bottom: 10px; }
+        .board-upload-zone {
+            border: 1.5px dashed rgba(124,58,237,0.3); border-radius: 10px;
+            padding: 14px 12px; text-align: center; cursor: pointer; transition: all 0.2s;
+        }
+        .board-upload-zone:hover { border-color: rgba(124,58,237,0.6); background: rgba(124,58,237,0.05); }
+        .board-upload-zone .uz-icon { font-size: 24px; margin-bottom: 4px; }
+        .board-upload-zone .uz-text { font-size: 11px; color: #64748b; }
+        .board-upload-zone .uz-types { font-size: 10px; color: #334155; margin-top: 2px; }
+
+        .board-file-row {
+            display: flex; align-items: center; gap: 6px;
+            background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.2);
+            border-radius: 9px; padding: 8px 10px;
+        }
+        .board-file-icon { font-size: 18px; }
+        .board-file-name { flex: 1; font-size: 11px; color: #a78bfa; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .btn-board-sm { background: none; border: none; cursor: pointer; font-size: 13px; padding: 3px 6px; border-radius: 5px; color: #64748b; transition: all 0.15s; }
+        .btn-board-sm:hover { background: rgba(255,255,255,0.08); color: #94a3b8; }
+        .btn-board-sm.danger:hover { background: rgba(239,68,68,0.1); color: #f87171; }
+        .btn-board-sm.adjust:hover { background: rgba(124,58,237,0.15); color: #a78bfa; }
+
+        /* ADD SCOPE BUTTON */
+        .btn-add-scope {
+            margin: 10px 14px 0;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            color: white; border: none; border-radius: 10px;
+            font-size: 13px; font-weight: 700; font-family: inherit;
+            cursor: pointer; transition: opacity 0.2s, transform 0.15s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            flex-shrink: 0;
+            box-shadow: 0 4px 14px rgba(124,58,237,0.35);
+        }
+        .btn-add-scope:hover { opacity: 0.88; transform: translateY(-1px); }
+        .btn-add-scope:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* SCOPES LIST */
+        .scopes-list { flex: 1; overflow-y: auto; padding: 10px 10px 20px; margin-top: 10px; }
+        .scopes-list::-webkit-scrollbar { width: 4px; }
+        .scopes-list::-webkit-scrollbar-track { background: transparent; }
+        .scopes-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+        .scope-item {
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 11px; margin-bottom: 6px; overflow: hidden; transition: border-color 0.2s;
+        }
+        .scope-item.highlighted { border-color: rgba(124,58,237,0.5); box-shadow: 0 0 0 1px rgba(124,58,237,0.2); }
+        .scope-item.dragging-scope { opacity: 0.35; }
+        .scope-item.drag-over-scope { border-color: rgba(124,58,237,0.7); background: rgba(124,58,237,0.06); }
+        .scope-item.scope-done { border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.04); }
+        .scope-item.scope-done .scope-name { color: #64748b; text-decoration: line-through; }
+        .scope-done-check {
+            appearance: none; -webkit-appearance: none;
+            width: 15px; height: 15px; flex-shrink: 0; cursor: pointer;
+            background: rgba(255,255,255,0.04);
+            border: 1.5px solid rgba(255,255,255,0.12);
+            border-radius: 4px;
+            transition: border-color 0.15s, background 0.15s;
+            position: relative; display: flex; align-items: center; justify-content: center;
+        }
+        .scope-done-check:hover { border-color: rgba(16,185,129,0.5); background: rgba(16,185,129,0.07); }
+        .scope-done-check:checked {
+            background: rgba(16,185,129,0.2);
+            border-color: rgba(16,185,129,0.6);
+        }
+        .scope-done-check:checked::after {
+            content: '';
+            display: block;
+            width: 5px; height: 8px;
+            border: 2px solid #10b981;
+            border-top: none; border-left: none;
+            transform: rotate(45deg) translate(-1px, -1px);
+        }
+
+        .scope-header {
+            display: flex; align-items: center; gap: 7px;
+            padding: 10px 10px; cursor: pointer; user-select: none; transition: background 0.15s;
+        }
+        .scope-header:hover { background: rgba(255,255,255,0.03); }
+        .scope-drag-handle { color: #2d3748; font-size: 13px; cursor: grab; flex-shrink: 0; padding: 2px 3px; border-radius: 4px; line-height: 1; transition: color 0.15s; }
+        .scope-drag-handle:hover { color: #64748b; }
+        .scope-drag-handle:active { cursor: grabbing; }
+        .scope-chevron { font-size: 11px; color: #475569; transition: transform 0.2s; flex-shrink: 0; }
+        .scope-item.expanded .scope-chevron { transform: rotate(90deg); color: #a78bfa; }
+        .scope-name {
+            flex: 1; font-size: 13px; font-weight: 600; color: #e2e8f0;
+            min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .scope-name-input {
+            flex: 1; background: rgba(124,58,237,0.12); border: 1.5px solid rgba(124,58,237,0.4);
+            border-radius: 7px; color: #f1f5f9; font-size: 13px; font-weight: 600;
+            font-family: inherit; padding: 3px 8px; outline: none; min-width: 0;
+        }
+        .scope-name-input.blink { animation: blinkBorder 0.7s ease infinite; }
+        @keyframes blinkBorder {
+            0%,100% { border-color: rgba(124,58,237,0.4); box-shadow: none; }
+            50% { border-color: rgba(124,58,237,1); box-shadow: 0 0 0 3px rgba(124,58,237,0.25); }
+        }
+        .scope-actions { display: flex; gap: 2px; flex-shrink: 0; }
+        .scope-action-btn {
+            width: 26px; height: 26px; border: none; background: transparent;
+            color: #334155; font-size: 13px; cursor: pointer; border-radius: 5px;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.15s, color 0.15s;
+        }
+        .scope-action-btn:hover { background: rgba(255,255,255,0.07); color: #94a3b8; }
+        .scope-action-btn.danger:hover { background: rgba(239,68,68,0.1); color: #f87171; }
+
+        .scope-body { display: none; padding: 0 10px 10px; }
+        .scope-item.expanded .scope-body { display: block; animation: fadeDown 0.18s ease; }
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+        .btn-edit-polylines {
+            width: 100%; padding: 7px; background: rgba(124,58,237,0.08);
+            border: 1px solid rgba(124,58,237,0.2); border-radius: 8px;
+            color: #a78bfa; font-size: 12px; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: all 0.2s; margin-bottom: 8px;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .btn-edit-polylines:hover { background: rgba(124,58,237,0.18); border-color: rgba(124,58,237,0.4); }
+
+        /* SUBSCOPES */
+        .subscopes-wrap { width: 100%; overflow-x: auto; }
+        .subscopes-table { width: 100%; border-collapse: collapse; min-width: 280px; }
+        .subscopes-table th {
+            font-size: 9.5px; font-weight: 700; color: #334155; text-transform: uppercase;
+            letter-spacing: 0.6px; padding: 5px 6px; border-bottom: 1px solid rgba(255,255,255,0.05);
+            text-align: left; white-space: nowrap;
+        }
+        .subscopes-table td {
+            padding: 5px 6px; border-bottom: 1px solid rgba(255,255,255,0.035);
+            vertical-align: middle; font-size: 11.5px; color: #cbd5e1;
+        }
+        .subscope-row { transition: background 0.12s; }
+        .subscope-row:hover:not(.done) { background: rgba(255,255,255,0.025); }
+        .subscope-row.done td { color: #334155 !important; }
+        .subscope-row.done { background: rgba(0,0,0,0.15); }
+        .subscope-row.drag-over-sub { border-top: 2px solid rgba(124,58,237,0.7) !important; }
+        .subscope-row.dragging-sub { opacity: 0.25; }
+
+        .sub-drag-cell { width: 14px; cursor: grab; color: #1e293b; font-size: 12px; text-align: center; padding: 0 2px; }
+        .sub-drag-cell:hover { color: #475569; }
+        .sub-drag-cell:active { cursor: grabbing; }
+
+        .subscope-name-cell { max-width: 110px; }
+        .sub-name-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default; }
+        .subscope-name-edit {
+            width: 100%; background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.3);
+            border-radius: 5px; color: #f1f5f9; font-size: 11.5px; font-family: inherit;
+            padding: 2px 5px; outline: none;
+        }
+        .date-btn {
+            background: none; border: none; cursor: pointer; font-size: 11px;
+            font-weight: 700; font-family: inherit; padding: 3px 5px;
+            border-radius: 5px; transition: background 0.12s; white-space: nowrap;
+        }
+        .date-btn.green { color: #22c55e; }
+        .date-btn.yellow { color: #f59e0b; }
+        .date-btn.red { color: #ef4444; }
+        .date-btn.none { color: #334155; }
+        .date-btn:hover { background: rgba(255,255,255,0.07); }
+
+        .icon-btn {
+            background: none; border: none; cursor: pointer; font-size: 14px;
+            padding: 3px 5px; border-radius: 5px; transition: background 0.12s;
+        }
+        .icon-btn:hover { background: rgba(255,255,255,0.08); }
+        .subscope-check {
+            appearance: none; -webkit-appearance: none;
+            width: 14px; height: 14px; cursor: pointer; flex-shrink: 0;
+            background: rgba(255,255,255,0.04);
+            border: 1.5px solid rgba(255,255,255,0.12);
+            border-radius: 4px;
+            transition: border-color 0.15s, background 0.15s;
+            position: relative;
+        }
+        .subscope-check:hover { border-color: rgba(124,58,237,0.5); background: rgba(124,58,237,0.07); }
+        .subscope-check:checked { background: rgba(124,58,237,0.2); border-color: rgba(124,58,237,0.6); }
+        .subscope-check:checked::after {
+            content: '';
+            position: absolute; top: 1px; left: 3px;
+            width: 4px; height: 7px;
+            border: 2px solid #a78bfa;
+            border-top: none; border-left: none;
+            transform: rotate(45deg);
+        }
+        .subscope-check:disabled { opacity: 0.35; cursor: not-allowed; }
+
+        .btn-add-subscope {
+            width: 100%; padding: 6px; background: transparent;
+            border: 1px dashed rgba(255,255,255,0.08); border-radius: 7px;
+            color: #334155; font-size: 11px; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: all 0.2s; margin-top: 7px;
+            display: flex; align-items: center; justify-content: center; gap: 5px;
+        }
+        .btn-add-subscope:hover { border-color: rgba(124,58,237,0.4); color: #a78bfa; background: rgba(124,58,237,0.04); }
+
+        .scopes-empty { text-align: center; padding: 36px 16px; color: #334155; }
+        .scopes-empty .e-icon { font-size: 32px; margin-bottom: 8px; }
+        .scopes-empty p { font-size: 12px; line-height: 1.6; }
+
+        .no-invest-info { padding: 36px 16px; text-align: center; color: #334155; }
+        .no-invest-info .ni-icon { font-size: 32px; margin-bottom: 8px; }
+        .no-invest-info p { font-size: 12px; }
+
+        /* PANEL RESIZER */
+        .panel-resizer {
+            width: 5px; flex-shrink: 0; cursor: col-resize; position: relative; z-index: 10;
+            background: rgba(255,255,255,0.05);
+            transition: background 0.15s;
+        }
+        .panel-resizer::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(to bottom, transparent 20%, rgba(124,58,237,0.35) 50%, transparent 80%);
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .panel-resizer:hover { background: rgba(124,58,237,0.25); }
+        .panel-resizer:hover::after { opacity: 1; }
+        .panel-resizer.dragging { background: rgba(124,58,237,0.45); }
+        .panel-resizer.dragging::after { opacity: 1; }
+
+        /* RIGHT PANEL */
+        .panel-right { flex: 1; position: relative; background: #080a10; overflow: hidden; min-width: 0; }
+
+        .board-empty {
+            position: absolute; inset: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 14px;
+            color: #334155; z-index: 2; pointer-events: none;
+        }
+        .board-empty .be-icon { font-size: 52px; opacity: 0.4; }
+        .board-empty p { font-size: 13px; color: #3d4d65; text-align: center; line-height: 1.6; }
+
+        .canvas-container { position: absolute; inset: 0; overflow: hidden; }
+        #board-canvas, #poly-canvas, #interact-canvas { position: absolute; top: 0; left: 0; }
+
+        /* DRAWING TOOLBAR */
+        .drawing-toolbar {
+            position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+            background: rgba(13,15,24,0.96); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px; padding: 10px 14px;
+            display: none; align-items: center; gap: 10px;
+            z-index: 100; backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            flex-wrap: wrap; max-width: calc(100% - 28px);
+        }
+        .drawing-toolbar.visible { display: flex; }
+        .toolbar-label { font-size: 10.5px; color: #64748b; font-weight: 600; white-space: nowrap; }
+        .toolbar-sep { width: 1px; height: 26px; background: rgba(255,255,255,0.07); flex-shrink: 0; }
+
+        .width-slider { width: 70px; accent-color: #7c3aed; cursor: pointer; }
+
+        .color-presets { display: flex; gap: 4px; flex-wrap: nowrap; }
+        .color-preset {
+            width: 18px; height: 18px; border-radius: 50%; cursor: pointer;
+            border: 2px solid transparent; transition: all 0.15s; flex-shrink: 0;
+        }
+        .color-preset:hover { transform: scale(1.25); }
+        .color-preset.selected { border-color: white; transform: scale(1.25); box-shadow: 0 0 0 1px rgba(255,255,255,0.5); }
+
+        .style-toggle {
+            display: flex; background: rgba(255,255,255,0.05); border-radius: 7px;
+            border: 1px solid rgba(255,255,255,0.08); overflow: hidden;
+        }
+        .style-btn {
+            padding: 5px 9px; border: none; background: transparent;
+            color: #475569; font-size: 10.5px; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+        }
+        .style-btn.active { background: rgba(124,58,237,0.25); color: #a78bfa; }
+
+        .toolbar-poly-info { font-size: 11px; color: #64748b; white-space: nowrap; }
+        .toolbar-poly-info span { color: #a78bfa; font-weight: 700; }
+
+        .btn-toolbar-finish {
+            padding: 7px 13px; background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            border: none; border-radius: 8px; color: white; font-size: 11.5px;
+            font-weight: 700; font-family: inherit; cursor: pointer; transition: opacity 0.2s; white-space: nowrap;
+        }
+        .btn-toolbar-finish:hover { opacity: 0.85; }
+        .btn-toolbar-cancel {
+            padding: 7px 11px; background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+            color: #64748b; font-size: 11.5px; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: background 0.15s; white-space: nowrap;
+        }
+        .btn-toolbar-cancel:hover { background: rgba(255,255,255,0.09); color: #94a3b8; }
+        .btn-toolbar-delete {
+            padding: 5px 11px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25);
+            border-radius: 8px; color: #f87171; font-size: 11.5px; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: all 0.15s; white-space: nowrap; display: none;
+        }
+        .btn-toolbar-delete:hover { background: rgba(239,68,68,0.22); border-color: rgba(239,68,68,0.45); }
+        .btn-toolbar-delete.active { background: rgba(239,68,68,0.25); border-color: rgba(239,68,68,0.6); color: #fca5a5; }
+        .draw-toast {
+            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+            background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.35);
+            border-radius: 10px; padding: 9px 18px; font-size: 12.5px; color: #fca5a5;
+            font-weight: 600; z-index: 5000; pointer-events: none;
+            opacity: 0; transition: opacity 0.2s;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+        }
+        .draw-toast.visible { opacity: 1; }
+
+        /* ADJUST TOOLBAR */
+        .adjust-toolbar {
+            position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+            background: rgba(13,15,24,0.96); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px; padding: 10px 14px;
+            display: none; align-items: center; gap: 10px;
+            z-index: 100; backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+        }
+        .adjust-toolbar.visible { display: flex; }
+        .adjust-label { font-size: 11px; color: #64748b; font-weight: 600; }
+        .scale-slider { width: 90px; accent-color: #7c3aed; cursor: pointer; }
+        .btn-adj-ok { padding: 6px 12px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); border-radius: 7px; color: #10b981; font-size: 11px; font-weight: 700; font-family: inherit; cursor: pointer; transition: all 0.15s; }
+        .btn-adj-ok:hover { background: rgba(16,185,129,0.25); }
+        .btn-adj-cancel { padding: 6px 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 7px; color: #64748b; font-size: 11px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background 0.15s; }
+        .btn-adj-cancel:hover { background: rgba(255,255,255,0.09); }
+
+        .zoom-indicator {
+            position: absolute; bottom: 14px; right: 14px;
+            background: rgba(13,15,24,0.8); border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 8px; padding: 4px 10px; font-size: 11px; color: #475569;
+            z-index: 50; user-select: none;
+        }
+
+        .zp-tooltip {
+            position: fixed; z-index: 5000;
+            background: #1a1d2e; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px; padding: 10px 13px;
+            font-size: 12px; color: #e2e8f0; max-width: 240px;
+            pointer-events: none; opacity: 0; transition: opacity 0.15s;
+            box-shadow: 0 8px 28px rgba(0,0,0,0.5); line-height: 1.55;
+            white-space: pre-wrap;
+        }
+        .zp-tooltip.visible { opacity: 1; }
+
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: 3000;
+            background: rgba(0,0,0,0.72); backdrop-filter: blur(6px);
+            align-items: center; justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-box {
+            background: #13162a; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 18px; padding: 28px 30px;
+            width: 100%; max-width: 440px;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.65);
+            animation: modalIn 0.22s cubic-bezier(0.4,0,0.2,1);
+        }
+        @keyframes modalIn { from { opacity: 0; transform: translateY(-14px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .modal-title { font-size: 17px; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+        .modal-sub { font-size: 12.5px; color: #64748b; margin-bottom: 20px; line-height: 1.5; }
+        .modal-field { margin-bottom: 13px; }
+        .modal-field label { display: block; font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; }
+        .modal-input, .modal-textarea {
+            width: 100%; padding: 9px 12px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 9px; color: #f1f5f9; font-size: 13px; font-family: inherit;
+            outline: none; transition: border-color 0.2s;
+        }
+        .modal-input:focus, .modal-textarea:focus { border-color: rgba(124,58,237,0.5); }
+        .modal-textarea { resize: vertical; min-height: 90px; }
+        .modal-actions { display: flex; gap: 8px; margin-top: 18px; }
+        .btn-modal-save { flex: 1; padding: 10px; background: linear-gradient(135deg, #7c3aed, #4f46e5); border: none; border-radius: 9px; color: white; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; transition: opacity 0.2s; }
+        .btn-modal-save:hover { opacity: 0.85; }
+        .btn-modal-cancel { padding: 10px 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 9px; color: #94a3b8; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background 0.2s; }
+        .btn-modal-cancel:hover { background: rgba(255,255,255,0.09); }
+
+        .mini-calendar {
+            position: fixed; z-index: 4000;
+            background: #13162a; border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 14px; padding: 14px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.65);
+            width: 230px; display: none;
+        }
+        .mini-calendar.open { display: block; animation: modalIn 0.18s ease; }
+        .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .cal-title { font-size: 13px; font-weight: 700; color: #e2e8f0; }
+        .cal-nav { background: none; border: none; color: #475569; font-size: 16px; cursor: pointer; padding: 2px 7px; border-radius: 5px; transition: background 0.12s; }
+        .cal-nav:hover { background: rgba(255,255,255,0.08); color: #94a3b8; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+        .cal-day-header { font-size: 9.5px; font-weight: 700; color: #334155; text-align: center; padding: 3px 0; }
+        .cal-day { font-size: 11px; text-align: center; padding: 5px 2px; border-radius: 5px; cursor: pointer; color: #94a3b8; transition: background 0.12s; }
+        .cal-day:hover { background: rgba(124,58,237,0.2); color: #f1f5f9; }
+        .cal-day.today { color: #7c3aed; font-weight: 700; }
+        .cal-day.selected { background: rgba(124,58,237,0.4); color: white; font-weight: 700; }
+        .cal-day.empty { pointer-events: none; color: transparent; }
+        .cal-clear { width: 100%; margin-top: 8px; padding: 5px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 6px; color: #f87171; font-size: 11px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background 0.12s; }
+        .cal-clear:hover { background: rgba(239,68,68,0.15); }
+    </style>
+</head>
+<body>
+<div class="bg-glow"></div>
+
+<header class="header">
+    <div class="header-left">
+        <div class="header-icon"><img src="logo.png" alt="Logo"></div>
+        <span class="header-title">Architektura dialogu</span>
+        <span class="header-sep">â€ş</span>
+        <span class="header-page">&#128208; Zakres projektowy</span>
+    </div>
+    <div class="header-right">
+        <span class="save-indicator" id="save-indicator" title="">&#9679;</span>
+        <a href="/dashboard.html" class="btn-back">&#8592; Dashboard</a>
+        <div class="user-avatar" id="user-avatar">?</div>
+    </div>
+</header>
+
+<div class="zp-tooltip" id="zp-tooltip"></div>
+
+<div class="mini-calendar" id="mini-calendar">
+    <div class="cal-header">
+        <button class="cal-nav" id="cal-prev">&#8249;</button>
+        <span class="cal-title" id="cal-title"></span>
+        <button class="cal-nav" id="cal-next">&#8250;</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <button class="cal-clear" id="cal-clear">&#10005; Usun date</button>
+</div>
+
+<div class="modal-overlay" id="modal-comment">
+    <div class="modal-box">
+        <div class="modal-title">&#128172; Komentarz</div>
+        <div class="modal-sub">Dopisuj kolejne uwagi do tego podzakresu.</div>
+        <div class="modal-field">
+            <label for="comment-textarea">Tresc komentarza</label>
+            <textarea class="modal-textarea" id="comment-textarea" placeholder="Wpisz uwagi..."></textarea>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-modal-cancel" onclick="closeCommentModal()">Anuluj</button>
+            <button class="btn-modal-save" onclick="saveComment()">Zapisz</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modal-contractor">
+    <div class="modal-box">
+        <div class="modal-title">&#128119; Wykonawca</div>
+        <div class="modal-sub">Dane wykonawcy podzakresu robot.</div>
+        <div class="modal-field">
+            <label for="contractor-name">Nazwa / imie i nazwisko</label>
+            <input class="modal-input" id="contractor-name" placeholder="np. FHU Elektro Jan Kowalski">
+        </div>
+        <div class="modal-field">
+            <label for="contractor-phone">Telefon</label>
+            <input class="modal-input" id="contractor-phone" placeholder="600 100 200">
+        </div>
+        <div class="modal-field">
+            <label for="contractor-email">E-mail</label>
+            <input class="modal-input" id="contractor-email" placeholder="jan@firma.pl">
+        </div>
+        <div class="modal-actions">
+            <button class="btn-modal-cancel" onclick="closeContractorModal()">Anuluj</button>
+            <button class="btn-modal-save" onclick="saveContractor()">Zapisz</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modal-confirm">
+    <div class="modal-box" style="max-width:380px">
+        <div class="modal-title" id="confirm-title">Potwierdz</div>
+        <div class="modal-sub" id="confirm-msg"></div>
+        <div class="modal-actions">
+            <button class="btn-modal-cancel" onclick="confirmCancel()">Anuluj</button>
+            <button class="btn-modal-save" id="confirm-ok-btn" style="background:linear-gradient(135deg,#ef4444,#b91c1c)" onclick="confirmOk()">Usun</button>
+        </div>
+    </div>
+</div>
+
+<div class="app-layout">
+    <div class="panel-left">
+        <div class="panel-left-top">
+            <select class="invest-select" id="invest-select" onchange="onInvestChange()">
+                <option value="">Wybierz inwestycję</option>
+            </select>
+            <div class="board-section" id="board-section" style="display:none">
+                <div id="board-no-file">
+                    <div class="board-upload-zone" onclick="triggerBoardUpload()" id="board-upload-zone">
+                        <div class="uz-icon">&#128506;</div>
+                        <div class="uz-text">Kliknij aby wgrac plansze zagospodarowania</div>
+                        <div class="uz-types">PDF, JPEG, PNG â€” maks. 50 MB</div>
+                    </div>
+                </div>
+                <div id="board-has-file" style="display:none">
+                    <div class="board-file-row">
+                        <span class="board-file-icon" id="board-file-icon">&#128444;</span>
+                        <span class="board-file-name" id="board-file-name">plansza.jpg</span>
+                        <button class="btn-board-sm adjust" title="Przesun / skaluj plansze" onclick="startAdjust()">&#10547;</button>
+                        <button class="btn-board-sm" title="Podmien plik" onclick="triggerBoardUpload()">&#128260;</button>
+                        <button class="btn-board-sm danger" title="Usun plik planszy" onclick="deleteBoardFile()">&#128465;</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button class="btn-add-scope" id="btn-add-scope" onclick="startAddScope()" disabled>+ Dodaj zakres</button>
+        <div class="scopes-list" id="scopes-list">
+            <div class="no-invest-info"><div class="ni-icon">&#128208;</div><p>Wybierz inwestycje, aby zarzadzac zakresami projektowymi.</p></div>
+        </div>
+        <input type="file" id="board-file-input" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="uploadBoard(this)">
+    </div>
+
+    <div class="panel-resizer" id="panel-resizer"></div>
+
+    <div class="panel-right" id="panel-right">
+        <div class="board-empty" id="board-empty">
+            <div class="be-icon">&#128506;</div>
+            <p>Wybierz inwestycje i wgraj plansze<br>zagospodarowania terenu,<br>aby zaczac rysowac zakresy.</p>
+        </div>
+        <div class="canvas-container" id="canvas-container" style="display:none">
+            <canvas id="board-canvas"></canvas>
+            <canvas id="poly-canvas"></canvas>
+            <canvas id="interact-canvas"></canvas>
+        </div>
+        <div class="drawing-toolbar" id="drawing-toolbar">
+            <span class="toolbar-label">Grubosc</span>
+            <input type="range" class="width-slider" id="poly-width" min="1" max="20" value="3" oninput="onWidthChange()">
+            <span id="poly-width-val" style="font-size:11px;color:#94a3b8;min-width:22px">3px</span>
+            <div class="toolbar-sep"></div>
+            <span class="toolbar-label">Kolor</span>
+            <div class="color-presets" id="color-presets"></div>
+            <div class="toolbar-sep"></div>
+            <div class="style-toggle">
+                <button class="style-btn active" id="style-solid" onclick="setLineStyle('solid')">Ciagla</button>
+                <button class="style-btn" id="style-dashed" onclick="setLineStyle('dashed')">Kreskowana</button>
+            </div>
+            <div class="toolbar-sep"></div>
+            <span class="toolbar-poly-info"><span id="poly-count">0</span> polilinii</span>
+            <button class="btn-toolbar-delete" id="btn-delete-mode" onclick="toggleDeleteMode()">&#128465; Usun polilinie</button>
+            <button class="btn-toolbar-finish" onclick="finishDrawing()">Zakoncz &#10003;</button>
+            <button class="btn-toolbar-cancel" onclick="cancelDrawing()">&#10005; Anuluj</button>
+        </div>
+        <div class="draw-toast" id="draw-toast"></div>
+        <div class="adjust-toolbar" id="adjust-toolbar">
+            <span class="adjust-label">Skala planszy</span>
+            <input type="range" class="scale-slider" id="board-scale-slider" min="20" max="400" value="100" oninput="onScaleSlider()">
+            <span id="board-scale-val" style="font-size:11px;color:#94a3b8;min-width:40px">100%</span>
+            <div class="toolbar-sep"></div>
+            <span class="adjust-label" style="color:#64748b;font-size:10.5px">Przeciagnij plansze myszka</span>
+            <button class="btn-adj-ok" onclick="confirmAdjust()">&#10003; Zastosuj</button>
+            <button class="btn-adj-cancel" onclick="cancelAdjust()">&#10005;</button>
+        </div>
+        <div class="zoom-indicator" id="zoom-indicator">100%</div>
+    </div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let ME=null,devId=null,investments={},currentInvestId=null,projectScopes={};
+let boardImage=null,boardPdfPage=null,canvasW=0,canvasH=0;
+let viewTx={x:0,y:0,scale:1};
+let isPanning=false,panStart={x:0,y:0},panOrigin={x:0,y:0};
+let isAdjusting=false,adjDragging=false,adjDragStart={x:0,y:0},adjDragOrigin={x:0,y:0};
+let pendingBoardOffset={x:0,y:0},pendingBoardScale=1.0;
+let isDrawing=false,drawMode='none',editScopeId=null,curPoints=[],sessionPolys=[];
+let drawColor='#3b82f6',drawWidth=3,drawDashed=false,lastMousePos=null;
+let boardOffset={x:0,y:0},boardScale=1.0;
+let calCb=null,calVal=null,calState={year:new Date().getFullYear(),month:new Date().getMonth()};
+let commentCb=null,contractorCb=null,confirmCb=null;
+let dragScopeId=null,dragSubId=null,dragSubScopeId=null;
+let saveTimerId=null;
+let _resizerDragging=false;
+// vertex drag state
+let vtxDrag=null; // {polyIdx, ptIdx} — przeciagany wierzcholek
+let _polyCountAtStart=0; // liczba polilinii w momencie otwarcia edycji
+let deleteMode=false; // tryb usuwania polilinii
+let _toastTimer=null;
+
+function setupPanelResizer(){
+    const resizer=document.getElementById('panel-resizer');
+    const panelLeft=document.querySelector('.panel-left');
+    let startX=0, startW=0;
+    resizer.addEventListener('mousedown',e=>{
+        e.preventDefault();
+        _resizerDragging=true;
+        startX=e.clientX;
+        startW=panelLeft.offsetWidth;
+        resizer.classList.add('dragging');
+        document.body.style.cursor='col-resize';
+        document.body.style.userSelect='none';
+    });
+    document.addEventListener('mousemove',e=>{
+        if(!_resizerDragging)return;
+        const maxW=Math.floor(window.innerWidth*0.65);
+        const newW=Math.max(220,Math.min(maxW,startW+(e.clientX-startX)));
+        panelLeft.style.width=newW+'px';
+        resizeCanvases();
+    });
+    document.addEventListener('mouseup',()=>{
+        if(!_resizerDragging)return;
+        _resizerDragging=false;
+        resizer.classList.remove('dragging');
+        document.body.style.cursor='';
+        document.body.style.userSelect='';
+        resizeCanvases();
+    });
+}
+
+const COLOR_PRESETS=['#ef4444','#f97316','#f59e0b','#eab308','#84cc16','#22c55e','#10b981','#06b6d4','#3b82f6','#6366f1','#8b5cf6','#a855f7','#ec4899','#94a3b8','#ffffff'];
+
+async function init(){
+    try{
+        const r=await fetch('/api/me');
+        if(r.status===401){location.href='/index.html';return;}
+        ME=await r.json();
+        devId=ME.devId||ME.companyId;
+        if(!devId&&ME.role!=='superadmin'){location.href='/dashboard.html';return;}
+        document.getElementById('user-avatar').textContent=(ME.name||'?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+        buildColorPresets();
+        setupCanvasEvents();
+        setupPanelResizer();
+        window.addEventListener('resize',resizeCanvases);
+        resizeCanvases();
+        await loadData();
+    }catch(e){location.href='/index.html';}
+}
+
+async function loadData(){
+    const[dbRes,scopeRes]=await Promise.all([fetch('/api/data/'+devId),fetch('/api/scopes/'+devId)]);
+    if(dbRes.ok){const db=await dbRes.json();investments=db.investments||{};}
+    if(scopeRes.ok) projectScopes=await scopeRes.json();
+    const sel=document.getElementById('invest-select');
+    Object.keys(investments).filter(k=>!investments[k].deleted).forEach(name=>{
+        const opt=new Option(name,name);sel.appendChild(opt);
+    });
+}
+
+async function onInvestChange(){
+    cancelDrawing();cancelAdjust();
+    boardImage=null;boardPdfPage=null;
+    currentInvestId=document.getElementById('invest-select').value||null;
+    if(!currentInvestId){
+        document.getElementById('btn-add-scope').disabled=true;
+        document.getElementById('board-section').style.display='none';
+        document.getElementById('canvas-container').style.display='none';
+        document.getElementById('board-empty').style.display='flex';
+        renderScopesList();return;
+    }
+    document.getElementById('btn-add-scope').disabled=false;
+    document.getElementById('board-section').style.display='block';
+    const inv=projectScopes[currentInvestId];
+    if(inv&&inv.boardFile){
+        showBoardHasFile(inv.boardFile,inv.boardType);
+        boardOffset=inv.boardOffset||{x:0,y:0};
+        boardScale=inv.boardScale||1.0;
+        await loadBoardFile(inv);
+    }else{
+        showBoardNoFile();
+        document.getElementById('canvas-container').style.display='none';
+        document.getElementById('board-empty').style.display='flex';
+    }
+    renderScopesList();renderAll();
+}
+
+function showBoardNoFile(){document.getElementById('board-no-file').style.display='block';document.getElementById('board-has-file').style.display='none';}
+function showBoardHasFile(fn,bt){document.getElementById('board-no-file').style.display='none';document.getElementById('board-has-file').style.display='block';document.getElementById('board-file-name').textContent=fn;document.getElementById('board-file-icon').textContent=bt==='pdf'?'P':'I';}
+function triggerBoardUpload(){document.getElementById('board-file-input').click();}
+
+async function uploadBoard(input){
+    const file=input.files[0];if(!file||!currentInvestId)return;
+    const fd=new FormData();fd.append('investId',currentInvestId);fd.append('board',file);
+    try{
+        const r=await fetch('/api/upload-scope-board/'+devId,{method:'POST',body:fd});
+        const d=await r.json();
+        if(r.ok&&d.success){
+            if(!projectScopes[currentInvestId])projectScopes[currentInvestId]={boardOffset:{x:0,y:0},boardScale:1,scopes:[]};
+            const inv=projectScopes[currentInvestId];
+            inv.boardFile=d.boardFile;inv.boardType=d.boardType;
+            showBoardHasFile(d.boardFile,d.boardType);
+            boardOffset=inv.boardOffset||{x:0,y:0};boardScale=inv.boardScale||1.0;
+            boardImage=null;boardPdfPage=null;
+            await loadBoardFile(inv);
+        }else{alert('Blad: '+(d.error||'nieznany'));}
+    }catch(e){alert('Blad polaczenia.');}
+    input.value='';
+}
+
+async function deleteBoardFile(){
+    openConfirm('Usun plansze?','Plik zostanie usuniety z serwera. Polilinie i zakresy pozostana.','Usun',async()=>{
+        const r=await fetch('/api/scope-board/'+devId+'/'+encodeURIComponent(currentInvestId),{method:'DELETE'});
+        if(r.ok){
+            if(projectScopes[currentInvestId]){projectScopes[currentInvestId].boardFile=null;projectScopes[currentInvestId].boardType=null;}
+            boardImage=null;boardPdfPage=null;
+            showBoardNoFile();
+            document.getElementById('canvas-container').style.display='none';
+            document.getElementById('board-empty').style.display='flex';
+            renderAll();
+        }
+    });
+}
+
+async function loadBoardFile(inv){
+    const url='/uploads/'+devId+'/'+encodeURIComponent(currentInvestId)+'/scopes/'+inv.boardFile;
+    document.getElementById('canvas-container').style.display='block';
+    document.getElementById('board-empty').style.display='none';
+    resizeCanvases();
+    if(inv.boardType==='pdf'){
+        try{
+            const pdf=await pdfjsLib.getDocument(url).promise;
+            boardPdfPage=await pdf.getPage(1);boardImage=null;
+            centerBoard();renderAll();
+        }catch(e){alert('Blad ladowania PDF: '+e.message);}
+    }else{
+        boardImage=new Image();
+        boardImage.onload=()=>{boardPdfPage=null;centerBoard();renderAll();};
+        boardImage.onerror=()=>{alert('Blad ladowania obrazka.');};
+        boardImage.src=url;
+    }
+}
+
+function getBoardNaturalSize(){
+    if(boardImage)return{w:boardImage.naturalWidth,h:boardImage.naturalHeight};
+    if(boardPdfPage){const vp=boardPdfPage.getViewport({scale:1});return{w:vp.width,h:vp.height};}
+    return{w:canvasW,h:canvasH};
+}
+
+function centerBoard(){
+    const nat=getBoardNaturalSize();
+    viewTx.scale=Math.min(canvasW/(nat.w*boardScale),canvasH/(nat.h*boardScale))*0.9;
+    viewTx.x=(canvasW-nat.w*boardScale*viewTx.scale)/2;
+    viewTx.y=(canvasH-nat.h*boardScale*viewTx.scale)/2;
+    updateZoom();
+}
+
+function resizeCanvases(){
+    const pr=document.getElementById('panel-right');
+    canvasW=pr.clientWidth;canvasH=pr.clientHeight;
+    ['board-canvas','poly-canvas','interact-canvas'].forEach(id=>{
+        const c=document.getElementById(id);
+        c.width=canvasW;c.height=canvasH;
+        c.style.width=canvasW+'px';c.style.height=canvasH+'px';
+    });
+    renderAll();
+}
+
+function getBoardTx(){
+    return{x:viewTx.x+boardOffset.x*viewTx.scale,y:viewTx.y+boardOffset.y*viewTx.scale,scale:viewTx.scale*boardScale};
+}
+function worldToCanvas(wx,wy){return{x:viewTx.x+wx*viewTx.scale,y:viewTx.y+wy*viewTx.scale};}
+function canvasToWorld(cx,cy){return{x:(cx-viewTx.x)/viewTx.scale,y:(cy-viewTx.y)/viewTx.scale};}
+
+// renderAll jest synchroniczny — pan i zoom reagują natychmiast.
+// Dla PDF: natychmiast wyświetlamy cache (poprzednia klatka przesunięta),
+// a re-render w pełnej rozdzielczości jest debouncowany aby nie blokować płynności.
+function renderAll(){renderBoard();renderPolylines();renderInteract();}
+
+let pdfRenderTask=null;
+let pdfCacheCanvas=null; // ostatnio wyrenderowana klatka PDF (pełna rozdzielczość)
+let pdfCacheTx=null;    // transform użyty przy tym cache
+let _pdfDebounceTimer=null;
+
+function renderBoard(){
+    const c=document.getElementById('board-canvas'),ctx=c.getContext('2d');
+    const bt=getBoardTx();
+    if(boardImage){
+        ctx.clearRect(0,0,c.width,c.height);
+        ctx.save();ctx.translate(bt.x,bt.y);ctx.scale(bt.scale,bt.scale);ctx.drawImage(boardImage,0,0);ctx.restore();
+    } else if(boardPdfPage){
+        ctx.clearRect(0,0,c.width,c.height);
+        // Natychmiast pokaż cache ze skalą CSS (brak migotania, brak opóźnienia)
+        if(pdfCacheCanvas&&pdfCacheTx){
+            // Przelicz jak bardzo przesunął się widok względem cache
+            const dx=bt.x-pdfCacheTx.x;
+            const dy=bt.y-pdfCacheTx.y;
+            const scaleRatio=bt.scale/pdfCacheTx.scale;
+            ctx.save();
+            ctx.translate(bt.x,bt.y);
+            ctx.scale(scaleRatio,scaleRatio);
+            ctx.drawImage(pdfCacheCanvas,0,0);
+            ctx.restore();
+        }
+        // Debounce: odłóż kosztowny re-render PDF o 200ms po ostatniej zmianie
+        clearTimeout(_pdfDebounceTimer);
+        _pdfDebounceTimer=setTimeout(()=>_renderPdfHiRes(bt),200);
+    }
+}
+
+async function _renderPdfHiRes(bt){
+    if(!boardPdfPage)return;
+    if(pdfRenderTask){try{pdfRenderTask.cancel();}catch(e){}}
+    const vp=boardPdfPage.getViewport({scale:bt.scale});
+    const off=document.createElement('canvas');
+    off.width=Math.ceil(vp.width);off.height=Math.ceil(vp.height);
+    pdfRenderTask=boardPdfPage.render({canvasContext:off.getContext('2d'),viewport:vp});
+    try{
+        await pdfRenderTask.promise;
+        pdfCacheCanvas=off;
+        pdfCacheTx={x:bt.x,y:bt.y,scale:bt.scale};
+        // Narysuj finalną klatkę tylko jeśli widok się nie zmienił
+        const c=document.getElementById('board-canvas'),ctx=c.getContext('2d');
+        const cur=getBoardTx();
+        ctx.clearRect(0,0,c.width,c.height);
+        ctx.save();ctx.translate(cur.x,cur.y);ctx.scale(cur.scale/bt.scale,cur.scale/bt.scale);ctx.drawImage(off,0,0);ctx.restore();
+    }catch(e){}
+    pdfRenderTask=null;
+}
+
+let hoveredScope=null; // scope aktualnie pod kursorem
+
+function renderPolylines(){
+    const c=document.getElementById('poly-canvas'),ctx=c.getContext('2d');
+    ctx.clearRect(0,0,c.width,c.height);
+    const inv=projectScopes[currentInvestId];if(!inv)return;
+    const activeScopeId=getExpandedScopeId();
+    (inv.scopes||[]).forEach(scope=>{
+        const alpha=(!activeScopeId||scope.id===activeScopeId)?1.0:0.3;
+        const isHover=(hoveredScope&&hoveredScope.id===scope.id);
+        (scope.polylines||[]).forEach(poly=>{
+            if(!poly.points||poly.points.length<2)return;
+            const cpts=poly.points.map(p=>worldToCanvas(p.x,p.y));
+            drawPolyCtx(ctx,cpts,poly.color,poly.width,poly.dashed,alpha,isHover);
+        });
+    });
+    if(isDrawing){sessionPolys.forEach((poly,pi)=>{
+        const cpts=poly.points.map(p=>worldToCanvas(p.x,p.y));
+        const inDelete=deleteMode;
+        drawPolyCtx(ctx,cpts,poly.color,poly.width,poly.dashed,1.0,inDelete?'delete':false);
+        // wierzchołki do przeciągania (widoczne tylko gdy nie w trybie usuwania)
+        if(!deleteMode){
+            cpts.forEach((cp,ji)=>{
+                const isDragged=(vtxDrag&&vtxDrag.polyIdx===pi&&vtxDrag.ptIdx===ji);
+                drawHandle(ctx,cp.x,cp.y,isDragged?'#ffffff':poly.color,isDragged?7:5);
+            });
+        }
+    });}
+}
+
+function renderInteract(){
+    const c=document.getElementById('interact-canvas'),ctx=c.getContext('2d');
+    ctx.clearRect(0,0,c.width,c.height);
+    if(!isDrawing||curPoints.length===0)return;
+    const cpts=curPoints.map(p=>worldToCanvas(p.x,p.y));
+    drawPolyCtx(ctx,cpts,drawColor,drawWidth,drawDashed,1.0,false);
+    cpts.forEach(p=>drawHandle(ctx,p.x,p.y,drawColor,4));
+    if(lastMousePos&&cpts.length>0){
+        ctx.save();ctx.globalAlpha=0.35;ctx.setLineDash([6,4]);
+        ctx.strokeStyle=drawColor;ctx.lineWidth=drawWidth;
+        ctx.beginPath();ctx.moveTo(cpts[cpts.length-1].x,cpts[cpts.length-1].y);
+        ctx.lineTo(lastMousePos.x,lastMousePos.y);ctx.stroke();
+        ctx.setLineDash([]);ctx.restore();
+    }
+}
+
+// isHover: true = hover glow, 'delete' = red warning glow, false = normal shadow
+function drawPolyCtx(ctx,pts,color,width,dashed,alpha,isHover){
+    if(pts.length<2)return;
+    ctx.save();
+    ctx.globalAlpha=alpha;
+    ctx.strokeStyle=color;
+    ctx.lineWidth=width;
+    ctx.lineJoin='round';
+    ctx.lineCap='round';
+    if(isHover===true){
+        ctx.shadowColor=color;
+        ctx.shadowBlur=18;
+        ctx.shadowOffsetX=0;
+        ctx.shadowOffsetY=0;
+    } else if(isHover==='delete'){
+        ctx.shadowColor='rgba(239,68,68,0.8)';
+        ctx.shadowBlur=14;
+        ctx.shadowOffsetX=0;
+        ctx.shadowOffsetY=0;
+    } else {
+        ctx.shadowColor='rgba(0,0,0,0.55)';
+        ctx.shadowBlur=6;
+        ctx.shadowOffsetX=1;
+        ctx.shadowOffsetY=1;
+    }
+    if(dashed)ctx.setLineDash([Math.max(4,width*2.5),Math.max(3,width*1.5)]);
+    ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);
+    for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);
+    ctx.stroke();
+    ctx.shadowBlur=0;
+    ctx.setLineDash([]);
+    ctx.restore();
+}
+
+function drawHandle(ctx,x,y,color,r){
+    ctx.save();ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=color;ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.7)';ctx.lineWidth=1.5;ctx.stroke();ctx.restore();
+}
+
+function setupCanvasEvents(){
+    const ic=document.getElementById('interact-canvas');
+    ic.addEventListener('mousedown',onMouseDown);
+    ic.addEventListener('mousemove',onMouseMove);
+    ic.addEventListener('mouseup',onMouseUp);
+    ic.addEventListener('dblclick',onDblClick);
+    ic.addEventListener('wheel',onWheel,{passive:false});
+    ic.addEventListener('contextmenu',e=>e.preventDefault());
+    document.addEventListener('mouseup',()=>{if(isPanning){isPanning=false;setCursor();}if(adjDragging){adjDragging=false;}});
+    document.addEventListener('click',onDocClick);
+}
+
+function getPos(e){const r=document.getElementById('interact-canvas').getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
+
+function onMouseDown(e){
+    e.preventDefault();
+    const p=getPos(e);
+    if(e.button===1){isPanning=true;panStart={x:e.clientX,y:e.clientY};panOrigin={...viewTx};setCursor('grabbing');return;}
+    if(e.button!==0)return;
+    if(isAdjusting){adjDragging=true;adjDragStart={x:e.clientX,y:e.clientY};adjDragOrigin={...pendingBoardOffset};setCursor('grabbing');return;}
+    if(isDrawing){
+        // tryb usuwania
+        if(deleteMode){
+            const hit=hitTestSessionPoly(p.x,p.y);
+            if(hit!==null){sessionPolys.splice(hit,1);document.getElementById('poly-count').textContent=sessionPolys.length;renderPolylines();renderInteract();return;}
+            return;
+        }
+        // hit-test na wierzcholkach sessionPolys
+        const vh=hitTestVertex(p.x,p.y);
+        if(vh!==null){vtxDrag=vh;setCursor('grabbing');return;}
+        // normalny punkt rysowania
+        const world=canvasToWorld(p.x,p.y);curPoints.push(world);renderInteract();
+        return;
+    }
+    if(!isDrawing){isPanning=true;panStart={x:e.clientX,y:e.clientY};panOrigin={...viewTx};setCursor('grabbing');return;}
+}
+
+function onMouseMove(e){
+    const p=getPos(e);lastMousePos=p;
+    if(isPanning){
+        viewTx.x=panOrigin.x+(e.clientX-panStart.x);
+        viewTx.y=panOrigin.y+(e.clientY-panStart.y);
+        renderAll();updateZoom();return;
+    }
+    if(isAdjusting&&adjDragging){
+        const dx=(e.clientX-adjDragStart.x)/viewTx.scale;
+        const dy=(e.clientY-adjDragStart.y)/viewTx.scale;
+        pendingBoardOffset={x:adjDragOrigin.x+dx,y:adjDragOrigin.y+dy};
+        boardOffset={...pendingBoardOffset};boardScale=pendingBoardScale;
+        renderAll();return;
+    }
+    // przeciaganie wierzcholka
+    if(vtxDrag!==null){
+        const w=canvasToWorld(p.x,p.y);
+        sessionPolys[vtxDrag.polyIdx].points[vtxDrag.ptIdx]={x:w.x,y:w.y};
+        renderPolylines();renderInteract();return;
+    }
+    if(isDrawing){
+        // kursor w trybach
+        if(deleteMode){
+            const hit=hitTestSessionPoly(p.x,p.y);
+            document.getElementById('interact-canvas').style.cursor=hit!==null?'not-allowed':'crosshair';
+        } else {
+            const vh=hitTestVertex(p.x,p.y);
+            document.getElementById('interact-canvas').style.cursor=vh!==null?'grab':'crosshair';
+        }
+        renderInteract();return;
+    }
+    const hit=hitTestPolylines(p.x,p.y);
+    // Hover: przerysuj polilinie tylko gdy zmienił się hovered scope
+    const prevHover=hoveredScope;
+    hoveredScope=hit;
+    if((prevHover?.id||null)!==(hit?.id||null)){renderPolylines();renderInteract();}
+    document.getElementById('interact-canvas').style.cursor=hit?'pointer':'grab';
+}
+
+function onMouseUp(e){
+    if(vtxDrag!==null){vtxDrag=null;setCursor();return;}
+    if(isPanning){isPanning=false;setCursor();}if(adjDragging){adjDragging=false;}
+}
+
+function onDblClick(e){
+    if(!isDrawing)return;e.preventDefault();
+    if(curPoints.length>1)curPoints.pop();
+    if(curPoints.length>=2){
+        sessionPolys.push({id:'poly_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),points:[...curPoints],color:drawColor,width:drawWidth,dashed:drawDashed});
+    }
+    curPoints=[];renderAll();
+    document.getElementById('poly-count').textContent=sessionPolys.length;
+}
+
+function onWheel(e){
+    e.preventDefault();
+    const p=getPos(e);
+    const factor=e.deltaY<0?1.13:0.89;
+    const ns=Math.max(0.02,Math.min(30,viewTx.scale*factor));
+    viewTx.x=p.x-(p.x-viewTx.x)*(ns/viewTx.scale);
+    viewTx.y=p.y-(p.y-viewTx.y)*(ns/viewTx.scale);
+    viewTx.scale=ns;renderAll();updateZoom();
+}
+
+function updateZoom(){document.getElementById('zoom-indicator').textContent=Math.round(viewTx.scale*100)+'%';}
+
+function setCursor(cur){
+    const ic=document.getElementById('interact-canvas');
+    if(isDrawing){ic.style.cursor='crosshair';return;}
+    if(isAdjusting){ic.style.cursor=adjDragging?'grabbing':'move';return;}
+    ic.style.cursor=cur||'grab';
+}
+
+function hitTestPolylines(cx,cy){
+    const inv=projectScopes[currentInvestId];if(!inv)return null;
+    for(const scope of(inv.scopes||[])){
+        for(const poly of(scope.polylines||[])){
+            if(!poly.points||poly.points.length<2)continue;
+            const pts=poly.points.map(p=>worldToCanvas(p.x,p.y));
+            for(let i=0;i<pts.length-1;i++){if(distSeg(cx,cy,pts[i].x,pts[i].y,pts[i+1].x,pts[i+1].y)<9)return scope;}
+        }
+    }
+    return null;
+}
+function distSeg(px,py,ax,ay,bx,by){
+    const dx=bx-ax,dy=by-ay;
+    if(!dx&&!dy)return Math.hypot(px-ax,py-ay);
+    const t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/(dx*dx+dy*dy)));
+    return Math.hypot(px-(ax+t*dx),py-(ay+t*dy));
+}
+
+// hit-test na poliliniach z sessionPolys (do usuwania)
+function hitTestSessionPoly(cx,cy){
+    for(let i=sessionPolys.length-1;i>=0;i--){
+        const poly=sessionPolys[i];
+        if(!poly.points||poly.points.length<2)continue;
+        const pts=poly.points.map(p=>worldToCanvas(p.x,p.y));
+        for(let j=0;j<pts.length-1;j++){
+            if(distSeg(cx,cy,pts[j].x,pts[j].y,pts[j+1].x,pts[j+1].y)<9)return i;
+        }
+    }
+    return null;
+}
+
+// hit-test na wierzcholkach sessionPolys (do przeciagania)
+const VTX_RADIUS=10; // piksele canvas
+function hitTestVertex(cx,cy){
+    for(let i=0;i<sessionPolys.length;i++){
+        const poly=sessionPolys[i];
+        if(!poly.points)continue;
+        for(let j=0;j<poly.points.length;j++){
+            const cp=worldToCanvas(poly.points[j].x,poly.points[j].y);
+            if(Math.hypot(cx-cp.x,cy-cp.y)<VTX_RADIUS)return{polyIdx:i,ptIdx:j};
+        }
+    }
+    return null;
+}
+
+function buildColorPresets(){
+    const ct=document.getElementById('color-presets');
+    COLOR_PRESETS.forEach(c=>{
+        const el=document.createElement('div');
+        el.className='color-preset'+(c==='#3b82f6'?' selected':'');
+        el.style.background=c;el.title=c;
+        el.onclick=()=>{drawColor=c;document.querySelectorAll('.color-preset').forEach(e=>e.classList.remove('selected'));el.classList.add('selected');};
+        ct.appendChild(el);
+    });
+}
+
+function onWidthChange(){drawWidth=parseInt(document.getElementById('poly-width').value);document.getElementById('poly-width-val').textContent=drawWidth+'px';}
+function setLineStyle(s){drawDashed=s==='dashed';document.getElementById('style-solid').classList.toggle('active',!drawDashed);document.getElementById('style-dashed').classList.toggle('active',drawDashed);}
+
+function startAddScope(){
+    if(!currentInvestId)return;
+    isDrawing=true;drawMode='new_scope';editScopeId=null;curPoints=[];sessionPolys=[];
+    deleteMode=false;vtxDrag=null;_polyCountAtStart=0;
+    document.getElementById('drawing-toolbar').classList.add('visible');
+    document.getElementById('btn-delete-mode').style.display='none';
+    document.getElementById('poly-count').textContent='0';
+    setCursor();
+    document.getElementById('interact-canvas').style.cursor='crosshair';
+}
+
+function startEditPolylines(scopeId){
+    if(!currentInvestId)return;
+    const inv=projectScopes[currentInvestId];
+    const scope=inv&&inv.scopes?inv.scopes.find(s=>s.id===scopeId):null;
+    isDrawing=true;drawMode='edit_scope';editScopeId=scopeId;curPoints=[];
+    sessionPolys=scope?JSON.parse(JSON.stringify(scope.polylines||[])): [];
+    deleteMode=false;vtxDrag=null;_polyCountAtStart=sessionPolys.length;
+    document.getElementById('drawing-toolbar').classList.add('visible');
+    document.getElementById('btn-delete-mode').style.display='inline-flex';
+    document.getElementById('btn-delete-mode').classList.remove('active');
+    document.getElementById('poly-count').textContent=sessionPolys.length;
+    setCursor();
+    document.getElementById('interact-canvas').style.cursor='crosshair';
+    renderAll();
+}
+
+function cancelDrawing(){
+    isDrawing=false;drawMode='none';editScopeId=null;curPoints=[];sessionPolys=[];
+    deleteMode=false;vtxDrag=null;
+    document.getElementById('drawing-toolbar').classList.remove('visible');
+    setCursor();renderAll();
+}
+
+function showDrawToast(msg){
+    const t=document.getElementById('draw-toast');
+    t.textContent=msg;t.classList.add('visible');
+    clearTimeout(_toastTimer);
+    _toastTimer=setTimeout(()=>t.classList.remove('visible'),3000);
+}
+
+function toggleDeleteMode(){
+    deleteMode=!deleteMode;
+    document.getElementById('btn-delete-mode').classList.toggle('active',deleteMode);
+    document.getElementById('interact-canvas').style.cursor=deleteMode?'crosshair':'crosshair';
+    if(deleteMode)showDrawToast('Kliknij na polilinie aby ja usunac. Kliknij ponownie przycisk aby wyjsc z trybu usuwania.');
+}
+
+function finishDrawing(){
+    // jesli trwa rysowanie biezacej linii — dolicz ja
+    const inProgressPoly=(curPoints.length>=2)?[{points:[...curPoints],color:drawColor,width:drawWidth,dashed:drawDashed}]:[];
+    const totalPolys=sessionPolys.length+inProgressPoly.length;
+    // walidacja: musi byc co najmniej 1 polilinia
+    if(totalPolys===0){
+        showDrawToast('Narysuj co najmniej jedna polilinie przed zakonczeniem.');
+        return;
+    }
+    // w edit_scope sprawdz czy cos sie zmienilo (nowa lub wierz. przesuniete)
+    if(drawMode==='edit_scope'&&totalPolys===_polyCountAtStart&&inProgressPoly.length===0){
+        // pozwol zakonczyc — uzytkownik mogl przesunac wierzcholki
+    }
+    if(curPoints.length>=2){sessionPolys.push({id:'poly_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),points:[...curPoints],color:drawColor,width:drawWidth,dashed:drawDashed});}
+    curPoints=[];
+    if(drawMode==='new_scope'){
+        const scopeId='scope_'+Date.now();
+        const newScope={id:scopeId,name:'',polylines:sessionPolys,subscopes:[]};
+        if(!projectScopes[currentInvestId])projectScopes[currentInvestId]={boardFile:null,boardType:null,boardOffset:{x:0,y:0},boardScale:1,scopes:[]};
+        projectScopes[currentInvestId].scopes.push(newScope);
+        isDrawing=false;drawMode='none';sessionPolys=[];
+        document.getElementById('drawing-toolbar').classList.remove('visible');
+        setCursor();renderScopesList();renderAll();
+        setTimeout(()=>{
+            const item=document.querySelector('.scope-item[data-scope-id="'+scopeId+'"]');
+            if(item)item.classList.add('expanded');
+            beginScopeNameEdit(scopeId,true);
+        },60);
+    }else if(drawMode==='edit_scope'){
+        const inv=projectScopes[currentInvestId];
+        const scope=inv&&inv.scopes?inv.scopes.find(s=>s.id===editScopeId):null;
+        if(scope)scope.polylines=sessionPolys;
+        isDrawing=false;drawMode='none';sessionPolys=[];
+        document.getElementById('drawing-toolbar').classList.remove('visible');
+        setCursor();triggerSave();renderAll();
+    }
+}
+
+function startAdjust(){
+    isAdjusting=true;
+    pendingBoardOffset={...boardOffset};pendingBoardScale=boardScale;
+    document.getElementById('board-scale-slider').value=Math.round(boardScale*100);
+    document.getElementById('board-scale-val').textContent=Math.round(boardScale*100)+'%';
+    document.getElementById('adjust-toolbar').classList.add('visible');
+    setCursor('move');
+}
+function onScaleSlider(){
+    const v=parseInt(document.getElementById('board-scale-slider').value);
+    document.getElementById('board-scale-val').textContent=v+'%';
+    pendingBoardScale=v/100;boardScale=pendingBoardScale;renderAll();
+}
+function confirmAdjust(){
+    boardOffset={...pendingBoardOffset};boardScale=pendingBoardScale;
+    const inv=projectScopes[currentInvestId];
+    if(inv){inv.boardOffset={...boardOffset};inv.boardScale=boardScale;}
+    isAdjusting=false;adjDragging=false;
+    document.getElementById('adjust-toolbar').classList.remove('visible');
+    setCursor();triggerSave();renderAll();
+}
+function cancelAdjust(){
+    if(!isAdjusting)return;
+    boardOffset=projectScopes[currentInvestId]&&projectScopes[currentInvestId].boardOffset||{x:0,y:0};
+    boardScale=projectScopes[currentInvestId]&&projectScopes[currentInvestId].boardScale||1.0;
+    isAdjusting=false;adjDragging=false;
+    document.getElementById('adjust-toolbar').classList.remove('visible');
+    setCursor();renderAll();
+}
+
+function getExpandedScopeId(){const el=document.querySelector('.scope-item.expanded');return el?el.dataset.scopeId:null;}
+
+function renderScopesList(){
+    const list=document.getElementById('scopes-list');
+    if(!currentInvestId){list.innerHTML='<div class="no-invest-info"><div class="ni-icon">&#128208;</div><p>Wybierz inwestycje.</p></div>';return;}
+    const inv=projectScopes[currentInvestId];
+    const scopes=inv?(inv.scopes||[]):[];
+    if(!scopes.length){list.innerHTML='<div class="scopes-empty"><div class="e-icon">&#128203;</div><p>Brak zakresow.<br>Kliknij <b>Dodaj zakres</b>, narysuj polilinie<br>i nadaj nazwe zakresowi.</p></div>';return;}
+    list.innerHTML=scopes.map(s=>renderScopeHtml(s)).join('');
+    attachScopeListEvents();
+}
+
+function renderScopeHtml(scope){
+    const isDone=!!(scope.done);
+    return `<div class="scope-item${isDone?' scope-done':''}" data-scope-id="${scope.id}" draggable="false">
+        <div class="scope-header" data-scope-id="${scope.id}">
+            <span class="scope-drag-handle" title="Przeciagnij">&#11039;</span>
+            <span class="scope-chevron">&#8250;</span>
+            <span class="scope-name" data-scope-id="${scope.id}">${escHtml(scope.name||'(brak nazwy)')}</span>
+            <div class="scope-actions">
+                <button class="scope-action-btn" title="Duplikuj" data-action="dup" data-scope-id="${scope.id}">&#8853;</button>
+                <button class="scope-action-btn danger" title="Usun" data-action="del" data-scope-id="${scope.id}">&#128465;</button>
+            </div>
+            <input type="checkbox" class="scope-done-check" title="Oznacz zakres jako wykonany"
+                ${isDone?'checked':''} data-scope-done="${scope.id}">
+        </div>
+        <div class="scope-body">
+            <button class="btn-edit-polylines" data-edit-poly="${scope.id}">&#9998; Edytuj polilinie</button>
+            <div class="subscopes-wrap">
+                <table class="subscopes-table">
+                    <thead><tr>
+                        <th style="width:14px"></th>
+                        <th>Nazwa podzakresu</th>
+                        <th>Data</th>
+                        <th style="text-align:center;width:28px">&#128172;</th>
+                        <th style="text-align:center;width:28px">&#128119;</th>
+                        <th style="text-align:center;width:22px"></th>
+                    </tr></thead>
+                    <tbody id="subs-${scope.id}">
+                        ${(scope.subscopes||[]).map(sub=>renderSubRow(scope.id,sub,isDone)).join('')}
+                    </tbody>
+                </table>
+            </div>
+            <button class="btn-add-subscope" data-add-sub="${scope.id}">+ dodaj podzakres</button>
+        </div>
+    </div>`;
+}
+
+function renderSubRow(scopeId,sub,scopeDone=false){
+    const doneClass=(sub.done||scopeDone)?' done':'';
+    const dc=getDateColor(sub.dueDate);
+    const dl=sub.dueDate?formatDate(sub.dueDate):'&#8212;';
+    const hasCmt=!!(sub.comment&&sub.comment.trim());
+    const hasCtr=!!(sub.contractor&&sub.contractor.name);
+    const ctrTip=escAttr(buildContractorTip(sub.contractor));
+    const cmt=escAttr(sub.comment||'Brak komentarza');
+    // gdy zakres jest wykonany — caly wiersz wyszarzony, interakcje zablokowane
+    const rowStyle=scopeDone?'style="opacity:0.35;pointer-events:none"':'';
+    return `<tr class="subscope-row${doneClass}" data-sub-id="${sub.id}" data-scope-id="${scopeId}" draggable="${scopeDone?'false':'true'}" ${rowStyle}>
+        <td class="sub-drag-cell" title="Przeciagnij">&#11039;</td>
+        <td class="subscope-name-cell"><span class="sub-name-label" data-sub="${sub.id}" data-scope="${scopeId}">${escHtml(sub.name||'(brak nazwy)')}</span></td>
+        <td><button class="date-btn ${dc}" data-date-sub="${sub.id}" data-date-scope="${scopeId}">${dl}</button></td>
+        <td style="text-align:center"><button class="icon-btn" data-cmt-sub="${sub.id}" data-cmt-scope="${scopeId}" onmouseenter="showTip(this,'${cmt}')" onmouseleave="hideTip()">${hasCmt?'&#128172;':'&#10133;'}</button></td>
+        <td style="text-align:center"><button class="icon-btn" data-ctr-sub="${sub.id}" data-ctr-scope="${scopeId}" onmouseenter="showTip(this,'${ctrTip}')" onmouseleave="hideTip()">${hasCtr?'&#128119;':'&#10133;'}</button></td>
+        <td style="text-align:center"><input type="checkbox" class="subscope-check" ${sub.done?'checked':''} ${scopeDone?'disabled':''} data-done-sub="${sub.id}" data-done-scope="${scopeId}"></td>
+    </tr>`;
+}
+
+function buildContractorTip(c){
+    if(!c||!c.name)return'Brak wykonawcy';
+    let t=c.name;
+    if(c.phone)t+='\n'+c.phone;
+    if(c.email)t+='\n'+c.email;
+    return t;
+}
+
+function attachScopeListEvents(){
+    document.querySelectorAll('.scope-header').forEach(h=>{
+        h.addEventListener('click',e=>{
+            if(e.target.closest('.scope-actions')||e.target.tagName==='INPUT')return;
+            const item=h.closest('.scope-item');
+            const wasExp=item.classList.contains('expanded');
+            document.querySelectorAll('.scope-item.expanded').forEach(el=>el.classList.remove('expanded'));
+            if(!wasExp)item.classList.add('expanded');
+            renderPolylines();
+        });
+    });
+    document.querySelectorAll('.scope-name[data-scope-id]').forEach(el=>{
+        el.addEventListener('dblclick',e=>{e.stopPropagation();beginScopeNameEdit(el.dataset.scopeId);});
+    });
+    document.querySelectorAll('.sub-name-label').forEach(el=>{
+        el.addEventListener('dblclick',e=>{e.stopPropagation();beginSubNameEdit(el.dataset.scope,el.dataset.sub);});
+    });
+    document.querySelectorAll('[data-action="dup"]').forEach(btn=>{btn.addEventListener('click',e=>{e.stopPropagation();duplicateScope(btn.dataset.scopeId);});});
+    document.querySelectorAll('[data-action="del"]').forEach(btn=>{btn.addEventListener('click',e=>{e.stopPropagation();deleteScope(btn.dataset.scopeId);});});
+    document.querySelectorAll('[data-edit-poly]').forEach(btn=>{btn.addEventListener('click',e=>{e.stopPropagation();startEditPolylines(btn.dataset.editPoly);});});
+    document.querySelectorAll('[data-add-sub]').forEach(btn=>{btn.addEventListener('click',e=>{e.stopPropagation();addSubscope(btn.dataset.addSub);});});
+    document.querySelectorAll('[data-date-sub]').forEach(btn=>{btn.addEventListener('click',e=>{e.stopPropagation();openCalendar(btn,btn.dataset.dateScope,btn.dataset.dateSub);});});
+    document.querySelectorAll('[data-cmt-sub]').forEach(btn=>{btn.addEventListener('click',e=>{e.stopPropagation();openCommentModal(btn.dataset.cmtScope,btn.dataset.cmtSub);});});
+    document.querySelectorAll('[data-ctr-sub]').forEach(btn=>{btn.addEventListener('click',e=>{e.stopPropagation();openContractorModal(btn.dataset.ctrScope,btn.dataset.ctrSub);});});
+    document.querySelectorAll('[data-done-sub]').forEach(cb=>{cb.addEventListener('change',()=>toggleDone(cb.dataset.doneScope,cb.dataset.doneSub,cb.checked));});
+    document.querySelectorAll('[data-scope-done]').forEach(cb=>{
+        cb.addEventListener('click',e=>e.stopPropagation());
+        cb.addEventListener('change',()=>toggleScopeDone(cb.dataset.scopeDone,cb.checked));
+    });
+
+    // Scope drag-drop (only from handle)
+    document.querySelectorAll('.scope-item').forEach(el=>{
+        el.addEventListener('dragstart',e=>{
+            if(!e.target.classList.contains('scope-drag-handle')){e.preventDefault();return;}
+            el.draggable=true;dragScopeId=el.dataset.scopeId;
+            setTimeout(()=>el.classList.add('dragging-scope'),0);
+        });
+        el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('drag-over-scope');});
+        el.addEventListener('dragleave',()=>el.classList.remove('drag-over-scope'));
+        el.addEventListener('drop',e=>{
+            e.preventDefault();el.classList.remove('drag-over-scope');
+            const tgt=el.dataset.scopeId;
+            if(!dragScopeId||dragScopeId===tgt)return;
+            const inv=projectScopes[currentInvestId];if(!inv)return;
+            const scopes=inv.scopes;
+            const fi=scopes.findIndex(s=>s.id===dragScopeId);
+            const ti=scopes.findIndex(s=>s.id===tgt);
+            if(fi===-1||ti===-1)return;
+            const[m]=scopes.splice(fi,1);scopes.splice(ti,0,m);
+            triggerSave();renderScopesList();
+        });
+        el.addEventListener('dragend',()=>{
+            el.classList.remove('dragging-scope');el.draggable=false;
+            document.querySelectorAll('.drag-over-scope').forEach(x=>x.classList.remove('drag-over-scope'));
+            dragScopeId=null;
+        });
+    });
+
+    // Subscope drag-drop
+    document.querySelectorAll('.subscope-row').forEach(row=>{
+        row.addEventListener('dragstart',e=>{
+            dragSubId=row.dataset.subId;dragSubScopeId=row.dataset.scopeId;
+            setTimeout(()=>row.classList.add('dragging-sub'),0);
+        });
+        row.addEventListener('dragover',e=>{
+            e.preventDefault();
+            if(row.dataset.scopeId===dragSubScopeId)row.classList.add('drag-over-sub');
+        });
+        row.addEventListener('dragleave',()=>row.classList.remove('drag-over-sub'));
+        row.addEventListener('drop',e=>{
+            e.preventDefault();row.classList.remove('drag-over-sub');
+            if(!dragSubId||row.dataset.subId===dragSubId||row.dataset.scopeId!==dragSubScopeId)return;
+            const inv=projectScopes[currentInvestId];
+            const scope=inv&&inv.scopes?inv.scopes.find(s=>s.id===dragSubScopeId):null;
+            if(!scope)return;
+            const subs=scope.subscopes;
+            const fi=subs.findIndex(s=>s.id===dragSubId),ti=subs.findIndex(s=>s.id===row.dataset.subId);
+            if(fi===-1||ti===-1)return;
+            const[m]=subs.splice(fi,1);subs.splice(ti,0,m);
+            triggerSave();renderScopesList();
+            setTimeout(()=>{const item=document.querySelector('.scope-item[data-scope-id="'+dragSubScopeId+'"]');if(item)item.classList.add('expanded');},30);
+        });
+        row.addEventListener('dragend',()=>{
+            row.classList.remove('dragging-sub');
+            document.querySelectorAll('.drag-over-sub').forEach(x=>x.classList.remove('drag-over-sub'));
+            dragSubId=null;dragSubScopeId=null;
+        });
+    });
+
+    // Canvas click = select scope
+    const ic=document.getElementById('interact-canvas');
+    ic.onclick=e=>{
+        if(isPanning||isDrawing)return;
+        const p=getPos(e);
+        const hit=hitTestPolylines(p.x,p.y);
+        if(hit){
+            const item=document.querySelector('.scope-item[data-scope-id="'+hit.id+'"]');
+            if(item){
+                const wasExp=item.classList.contains('expanded');
+                document.querySelectorAll('.scope-item.expanded').forEach(el=>el.classList.remove('expanded'));
+                if(!wasExp)item.classList.add('expanded');
+                renderPolylines();
+                item.scrollIntoView({behavior:'smooth',block:'nearest'});
+            }
+        }
+    };
+}
+
+function beginScopeNameEdit(scopeId,isNew=false){
+    const nameEl=document.querySelector('.scope-name[data-scope-id="'+scopeId+'"]');
+    if(!nameEl)return;
+    const inv=projectScopes[currentInvestId];
+    const scope=inv&&inv.scopes?inv.scopes.find(s=>s.id===scopeId):null;
+    if(!scope)return;
+    const input=document.createElement('input');
+    input.type='text';input.className='scope-name-input'+(isNew?' blink':'');
+    input.value=scope.name||'';input.placeholder='Wpisz nazwe zakresu...';
+    nameEl.replaceWith(input);input.focus();input.select();
+    const item=input.closest('.scope-item');if(item)item.classList.add('expanded');
+    const finish=()=>{
+        const val=input.value.trim();
+        const taken=(inv.scopes||[]).filter(s=>s.id!==scopeId).map(s=>(s.name||'').toLowerCase());
+        if(!val){
+            if(isNew){inv.scopes=(inv.scopes||[]).filter(s=>s.id!==scopeId);triggerSave();renderScopesList();renderAll();return;}
+            alert('Nazwa zakresu nie moze byc pusta.');input.focus();return;
+        }
+        if(taken.includes(val.toLowerCase())){alert('Zakres o tej nazwie juz istnieje.');input.focus();return;}
+        scope.name=val;triggerSave();renderScopesList();
+        setTimeout(()=>{const el=document.querySelector('.scope-item[data-scope-id="'+scopeId+'"]');if(el)el.classList.add('expanded');},30);
+    };
+    input.addEventListener('blur',finish);
+    input.addEventListener('keydown',e=>{
+        if(e.key==='Enter')input.blur();
+        if(e.key==='Escape'){
+            if(isNew){inv.scopes=(inv.scopes||[]).filter(s=>s.id!==scopeId);triggerSave();renderScopesList();renderAll();}
+            else renderScopesList();
+        }
+    });
+}
+
+function duplicateScope(scopeId){
+    const inv=projectScopes[currentInvestId];if(!inv)return;
+    const scope=inv.scopes.find(s=>s.id===scopeId);if(!scope)return;
+    let name=scope.name+' (kopia)',n=1;
+    const ex=inv.scopes.map(s=>s.name.toLowerCase());
+    while(ex.includes(name.toLowerCase()))name=scope.name+' (kopia '+(++n)+')';
+    const ns=JSON.parse(JSON.stringify(scope));
+    ns.id='scope_'+Date.now();ns.name=name;
+    ns.subscopes=ns.subscopes.map(s=>({...s,id:'sub_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)}));
+    ns.polylines=ns.polylines.map(p=>({...p,id:'poly_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)}));
+    inv.scopes.push(ns);triggerSave();renderScopesList();renderAll();
+}
+
+function deleteScope(scopeId){
+    const inv=projectScopes[currentInvestId];
+    const scope=inv&&inv.scopes?inv.scopes.find(s=>s.id===scopeId):null;if(!scope)return;
+    openConfirm('Usun zakres?','Zakres "'+scope.name+'" oraz jego polilinie i podzakresy zostana usuniete.','Usun',()=>{
+        inv.scopes=inv.scopes.filter(s=>s.id!==scopeId);
+        triggerSave();renderScopesList();renderAll();
+    });
+}
+
+function addSubscope(scopeId){
+    const inv=projectScopes[currentInvestId];
+    const scope=inv&&inv.scopes?inv.scopes.find(s=>s.id===scopeId):null;if(!scope)return;
+    const sub={id:'sub_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),name:'',dueDate:null,comment:'',contractor:null,done:false};
+    scope.subscopes.push(sub);renderScopesList();
+    setTimeout(()=>{
+        const item=document.querySelector('.scope-item[data-scope-id="'+scopeId+'"]');if(item)item.classList.add('expanded');
+        beginSubNameEdit(scopeId,sub.id,true);
+    },40);
+}
+
+function beginSubNameEdit(scopeId,subId,isNew=false){
+    const el=document.querySelector('.sub-name-label[data-sub="'+subId+'"]');if(!el)return;
+    const inv=projectScopes[currentInvestId];
+    const scope=inv&&inv.scopes?inv.scopes.find(s=>s.id===scopeId):null;
+    const sub=scope?scope.subscopes.find(s=>s.id===subId):null;if(!sub)return;
+    const input=document.createElement('input');
+    input.type='text';input.className='subscope-name-edit';
+    input.value=sub.name||'';input.placeholder='Nazwa podzakresu...';
+    el.replaceWith(input);input.focus();input.select();
+    const finish=()=>{
+        const val=input.value.trim();
+        const taken=scope.subscopes.filter(s=>s.id!==subId).map(s=>(s.name||'').toLowerCase());
+        if(!val){
+            if(isNew){scope.subscopes=scope.subscopes.filter(s=>s.id!==subId);triggerSave();}
+            renderScopesList();setTimeout(()=>{const item=document.querySelector('.scope-item[data-scope-id="'+scopeId+'"]');if(item)item.classList.add('expanded');},30);
+            return;
+        }
+        if(taken.includes(val.toLowerCase())){alert('Podzakres o tej nazwie juz istnieje.');input.focus();return;}
+        sub.name=val;triggerSave();renderScopesList();
+        setTimeout(()=>{const item=document.querySelector('.scope-item[data-scope-id="'+scopeId+'"]');if(item)item.classList.add('expanded');},30);
+    };
+    input.addEventListener('blur',finish);
+    input.addEventListener('keydown',e=>{
+        if(e.key==='Enter')input.blur();
+        if(e.key==='Escape'){if(isNew){scope.subscopes=scope.subscopes.filter(s=>s.id!==subId);triggerSave();}renderScopesList();setTimeout(()=>{const item=document.querySelector('.scope-item[data-scope-id="'+scopeId+'"]');if(item)item.classList.add('expanded');},30);}
+    });
+}
+
+function toggleDone(scopeId,subId,done){
+    const inv=projectScopes[currentInvestId];
+    const scope=inv&&inv.scopes?inv.scopes.find(s=>s.id===scopeId):null;
+    const sub=scope?scope.subscopes.find(s=>s.id===subId):null;if(!sub)return;
+    sub.done=done;triggerSave();renderScopesList();
+    setTimeout(()=>{const item=document.querySelector('.scope-item[data-scope-id="'+scopeId+'"]');if(item)item.classList.add('expanded');},30);
+}
+
+function toggleScopeDone(scopeId,done){
+    const inv=projectScopes[currentInvestId];
+    const scope=inv&&inv.scopes?inv.scopes.find(s=>s.id===scopeId):null;if(!scope)return;
+    // zapisz stan 'done' zakresu — podzakresy pozostaja niezmienione
+    scope.done=done;
+    triggerSave();renderScopesList();
+    setTimeout(()=>{const item=document.querySelector('.scope-item[data-scope-id="'+scopeId+'"]');if(item)item.classList.add('expanded');},30);
+}
+
+function openCalendar(btn,scopeId,subId){
+    const inv=projectScopes[currentInvestId];
+    const scope=inv&&inv.scopes?inv.scopes.find(s=>s.id===scopeId):null;
+    const sub=scope?scope.subscopes.find(s=>s.id===subId):null;if(!sub)return;
+    calVal=sub.dueDate||null;
+    const d=calVal?new Date(calVal):new Date();
+    calState={year:d.getFullYear(),month:d.getMonth()};
+    calCb=dateStr=>{
+        sub.dueDate=dateStr;triggerSave();renderScopesList();
+        setTimeout(()=>{const item=document.querySelector('.scope-item[data-scope-id="'+scopeId+'"]');if(item)item.classList.add('expanded');},30);
+    };
+    renderCal();
+    const cal=document.getElementById('mini-calendar');
+    const r=btn.getBoundingClientRect();
+    cal.style.top=(r.bottom+6)+'px';
+    cal.style.left=Math.min(r.left,window.innerWidth-240)+'px';
+    cal.classList.add('open');
+    document.getElementById('cal-prev').onclick=()=>{calState.month--;if(calState.month<0){calState.month=11;calState.year--;}renderCal();};
+    document.getElementById('cal-next').onclick=()=>{calState.month++;if(calState.month>11){calState.month=0;calState.year++;}renderCal();};
+    document.getElementById('cal-clear').onclick=()=>{if(calCb)calCb(null);closeCalendar();};
+}
+function renderCal(){
+    const months=['Styczen','Luty','Marzec','Kwiecien','Maj','Czerwiec','Lipiec','Sierpien','Wrzesien','Pazdziernik','Listopad','Grudzien'];
+    document.getElementById('cal-title').textContent=months[calState.month]+' '+calState.year;
+    const today=new Date();
+    const first=new Date(calState.year,calState.month,1);
+    let start=first.getDay();start=start===0?6:start-1;
+    const dmax=new Date(calState.year,calState.month+1,0).getDate();
+    const days=['Pn','Wt','Sr','Cz','Pt','So','Nd'];
+    let h=days.map(d=>'<div class="cal-day-header">'+d+'</div>').join('');
+    for(let i=0;i<start;i++)h+='<div class="cal-day empty"></div>';
+    for(let d=1;d<=dmax;d++){
+        const ds=calState.year+'-'+String(calState.month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+        const isTd=today.getFullYear()===calState.year&&today.getMonth()===calState.month&&today.getDate()===d;
+        const isSel=calVal===ds;
+        h+='<div class="cal-day '+(isTd?'today':'')+' '+(isSel?'selected':'')+'" onclick="pickDay(\''+ds+'\')">'+d+'</div>';
+    }
+    document.getElementById('cal-grid').innerHTML=h;
+}
+function pickDay(ds){calVal=ds;if(calCb)calCb(ds);closeCalendar();}
+function closeCalendar(){document.getElementById('mini-calendar').classList.remove('open');calCb=null;}
+function onDocClick(e){
+    const cal=document.getElementById('mini-calendar');
+    if(cal.classList.contains('open')&&!cal.contains(e.target)&&!e.target.closest('[data-date-sub]'))closeCalendar();
+}
+
+function getDateColor(ds){
+    if(!ds)return'none';
+    const now=new Date();now.setHours(0,0,0,0);
+    const d=new Date(ds);d.setHours(0,0,0,0);
+    const diff=(d-now)/(1000*60*60*24);
+    if(diff<0)return'red';if(diff<=14)return'yellow';return'green';
+}
+function formatDate(ds){if(!ds)return'&#8212;';const[y,m,d]=ds.split('-');return d+'.'+m+'.'+y;}
+
+function openCommentModal(scopeId,subId){
+    const inv=projectScopes[currentInvestId];
+    const scope=inv&&inv.scopes?inv.scopes.find(s=>s.id===scopeId):null;
+    const sub=scope?scope.subscopes.find(s=>s.id===subId):null;if(!sub)return;
+    document.getElementById('comment-textarea').value=sub.comment||'';
+    document.getElementById('modal-comment').classList.add('open');
+    commentCb=txt=>{sub.comment=txt;triggerSave();renderScopesList();setTimeout(()=>{const item=document.querySelector('.scope-item[data-scope-id="'+scopeId+'"]');if(item)item.classList.add('expanded');},30);};
+    setTimeout(()=>document.getElementById('comment-textarea').focus(),80);
+}
+function saveComment(){if(commentCb)commentCb(document.getElementById('comment-textarea').value.trim());closeCommentModal();}
+function closeCommentModal(){document.getElementById('modal-comment').classList.remove('open');commentCb=null;}
+
+function openContractorModal(scopeId,subId){
+    const inv=projectScopes[currentInvestId];
+    const scope=inv&&inv.scopes?inv.scopes.find(s=>s.id===scopeId):null;
+    const sub=scope?scope.subscopes.find(s=>s.id===subId):null;if(!sub)return;
+    const c=sub.contractor||{};
+    document.getElementById('contractor-name').value=c.name||'';
+    document.getElementById('contractor-phone').value=c.phone||'';
+    document.getElementById('contractor-email').value=c.email||'';
+    document.getElementById('modal-contractor').classList.add('open');
+    contractorCb=d=>{sub.contractor=d;triggerSave();renderScopesList();setTimeout(()=>{const item=document.querySelector('.scope-item[data-scope-id="'+scopeId+'"]');if(item)item.classList.add('expanded');},30);};
+    setTimeout(()=>document.getElementById('contractor-name').focus(),80);
+}
+function saveContractor(){
+    const d={name:document.getElementById('contractor-name').value.trim(),phone:document.getElementById('contractor-phone').value.trim(),email:document.getElementById('contractor-email').value.trim()};
+    if(contractorCb)contractorCb(d);closeContractorModal();
+}
+function closeContractorModal(){document.getElementById('modal-contractor').classList.remove('open');contractorCb=null;}
+
+function openConfirm(title,msg,okLabel,cb){
+    document.getElementById('confirm-title').textContent=title;
+    document.getElementById('confirm-msg').textContent=msg;
+    document.getElementById('confirm-ok-btn').textContent=okLabel||'Potwierdz';
+    confirmCb=cb;
+    document.getElementById('modal-confirm').classList.add('open');
+}
+function confirmOk(){document.getElementById('modal-confirm').classList.remove('open');if(confirmCb){confirmCb();confirmCb=null;}}
+function confirmCancel(){document.getElementById('modal-confirm').classList.remove('open');confirmCb=null;}
+
+document.getElementById('modal-comment').addEventListener('click',e=>{if(e.target===e.currentTarget)closeCommentModal();});
+document.getElementById('modal-contractor').addEventListener('click',e=>{if(e.target===e.currentTarget)closeContractorModal();});
+document.getElementById('modal-confirm').addEventListener('click',e=>{if(e.target===e.currentTarget)confirmCancel();});
+
+function showTip(el,text){
+    if(!text)return;
+    const tip=document.getElementById('zp-tooltip');
+    tip.textContent=text;
+    const r=el.getBoundingClientRect();
+    tip.style.left=(r.left+r.width/2)+'px';tip.style.top=(r.bottom+8)+'px';tip.style.transform='translateX(-50%)';
+    tip.classList.add('visible');
+}
+function hideTip(){document.getElementById('zp-tooltip').classList.remove('visible');}
+
+function triggerSave(){
+    setSaveIndicator('saving');
+    clearTimeout(saveTimerId);
+    saveTimerId=setTimeout(doSave,700);
+}
+async function doSave(){
+    if(!currentInvestId||!devId)return;
+    const inv=projectScopes[currentInvestId];if(!inv)return;
+    try{
+        const r=await fetch('/api/scopes/'+devId,{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({investId:currentInvestId,scopeData:inv})
+        });
+        setSaveIndicator(r.ok?'saved':'error');
+        setTimeout(()=>setSaveIndicator('idle'),2200);
+    }catch(e){setSaveIndicator('error');}
+}
+function setSaveIndicator(state){
+    const el=document.getElementById('save-indicator');
+    el.className='save-indicator';
+    if(state==='saving'){el.classList.add('saving');el.title='Zapisywanie...';}
+    else if(state==='saved'){el.classList.add('saved');el.title='Zapisano';}
+    else if(state==='error'){el.style.color='#ef4444';el.title='Blad zapisu!';}
+    else{el.style.color='';el.title='';}
+}
+
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function escAttr(s){return String(s||'').replace(/'/g,'&#39;').replace(/"/g,'&quot;').replace(/\n/g,' ');}
+
+document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){closeCalendar();closeCommentModal();closeContractorModal();confirmCancel();if(isDrawing)cancelDrawing();if(isAdjusting)cancelAdjust();}
+});
+
+init();
+</script>
+</body>
+</html>

@@ -393,6 +393,10 @@
                 <span style="font-size:13px; color:#cbd5e1;">📅 Harmonogram</span>
             </label>
             <label style="display:flex; gap:8px; align-items:center; cursor:pointer;">
+                <input type="checkbox" id="app-zakres" value="zakres" style="width:16px; height:16px; accent-color:#3b82f6;">
+                <span style="font-size:13px; color:#cbd5e1;">📏 Zakres projektowy</span>
+            </label>
+            <label style="display:flex; gap:8px; align-items:center; cursor:pointer;">
                 <input type="checkbox" id="app-company" value="company" style="width:16px; height:16px; accent-color:#3b82f6;">
                 <span style="font-size:13px; color:#cbd5e1;">🏢 Zarządzanie firmą</span>
             </label>
@@ -500,9 +504,9 @@
         currentAppsId = id;
         document.getElementById('apps-comp-name').textContent = name;
         const company = companies.find(c => c.id === id);
-        const apps = company.apps || ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company'];
+        const apps = company.apps || ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company', 'zakres'];
         
-        ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company'].forEach(app => {
+        ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company', 'zakres'].forEach(app => {
             const el = document.getElementById(`app-${app}`);
             if (el) el.checked = apps.includes(app);
         });
@@ -518,7 +522,7 @@
 
     async function saveApps() {
         if (!currentAppsId) return;
-        const apps = ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company']
+        const apps = ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company', 'zakres']
             .filter(app => document.getElementById(`app-${app}`).checked);
 
         const alertEl = document.getElementById('apps-alert');
@@ -755,7 +759,7 @@
             const me = await res.json();
             document.getElementById('user-avatar').textContent = (me.name || me.email || '?')[0].toUpperCase();
             const nav = document.getElementById('header-nav');
-            const companyApps = me.companyApps || ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company'];
+            const companyApps = me.companyApps || ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company', 'zakres'];
             const tiles = [
                 { id: 'sales', href: '/developer.html', icon: '📈', name: 'Panel Sprzedaży', perm: 'sales' },
                 { id: 'inwestycje', href: '/inwestycje.html', icon: '🏗️', name: 'Inwestycje', perm: 'inwestycje' },
@@ -764,6 +768,7 @@
                 { id: 'kontakty', href: '/kontakty.html', icon: '📇', name: 'Baza kontaktów', perm: 'kontakty' },
                 { id: 'usterki', href: '/usterki.html', icon: '⚠️', name: 'Panel Usterek', perm: 'usterki' },
                 { id: 'harmonogram', href: '/harmonogram.html', icon: '📅', name: 'Harmonogram', perm: 'harmonogram' },
+                { id: 'zakres', href: '/zakres.html', icon: '📏', name: 'Zakres projektowy', perm: 'zakres' },
                 { id: 'company', href: '/company-admin.html', icon: '🏢', name: 'Zarządzanie Firmą', perm: 'company' },
                 { id: 'superadmin', href: '/superadmin.html', icon: '🔑', name: 'Panel SuperAdmina', perm: 'superadmin' }
             ];

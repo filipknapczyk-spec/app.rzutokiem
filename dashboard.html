@@ -251,6 +251,7 @@
         .tile-kontakty{ --tile-color-a: #f97316; --tile-color-b: #ea580c; }
         .tile-usterki{ --tile-color-a: #ef4444; --tile-color-b: #b91c1c; }
         .tile-harmonogram{ --tile-color-a: #14b8a6; --tile-color-b: #0f766e; }
+        .tile-zakres { --tile-color-a: #7c3aed; --tile-color-b: #4f46e5; }
 
         .badge-lock {
             display: inline-block;
@@ -356,7 +357,7 @@
 
         function canAccess(me, perm) {
             if (me.role === 'superadmin') return true;
-            const companyApps = me.companyApps || ['sales', 'admin', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company'];
+            const companyApps = me.companyApps || ['sales', 'admin', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company', 'zakres'];
             if (perm && !companyApps.includes(perm)) return false;
 
             if (me.role === 'companyAdmin') return true;
@@ -437,6 +438,16 @@
                     colorClass: 'tile-harmonogram',
                     perm: 'harmonogram',
                     show: canAccess(me, 'harmonogram'),
+                },
+                {
+                    id: 'zakres',
+                    href: '/zakres.html',
+                    icon: '📐',
+                    name: 'Zakres projektowy',
+                    desc: 'Plansza zagospodarowania, polilinie, zakresy i podzakresy robót.',
+                    colorClass: 'tile-zakres',
+                    perm: 'zakres',
+                    show: canAccess(me, 'zakres'),
                 },
                 {
                     id: 'company',

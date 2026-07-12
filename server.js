@@ -178,6 +178,13 @@ app.get(
   (req, res) => res.sendFile(path.join(__dirname, "harmonogram.html")),
 );
 
+app.get(
+  "/zakres.html",
+  checkAuth,
+  checkPermission("zakres"),
+  (req, res) => res.sendFile(path.join(__dirname, "zakres.html")),
+);
+
 app.get("/company-admin.html", checkAuth, (req, res) => {
   if (req.user.role !== "companyAdmin" && req.user.role !== "superadmin")
     return res.redirect("/dashboard.html");
@@ -1402,6 +1409,130 @@ app.post("/api/admin/backups/restore", checkAuth, async (req, res) => {
   } catch (err) {
     console.error("[Backup API] Błąd podczas przywracania kopii:", err);
     res.status(500).json({ error: "Wewnętrzny błąd serwera podczas przywracania." });
+  }
+});
+
+// ============================================================
+// --- ZAKRES PROJEKTOWY — PLANSZA I ZAKRESY ---
+// ============================================================
+
+// Multer dla planszy zagospodarowania terenu
+const scopeBoardStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    let devId = req.user.role !== "superadmin" ? req.user.devId : req.params.devId;
+    const { investId } = req.body;
+    if (!devId || !investId) return cb(new Error("Brak danych"), null);
+    const dir = path.join(__dirname, "uploads", sanitize(devId), sanitize(investId), "scopes");
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    file.originalname = Buffer.from(file.originalname, "latin1").toString("utf8");
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, "plansza" + ext);
+  }
+});
+const scopeBoardUpload = multer({
+  storage: scopeBoardStorage,
+  fileFilter: (req, file, cb) => {
+    const allowed = [".pdf", ".jpg", ".jpeg", ".png"];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!allowed.includes(ext)) return cb(new Error("Niedozwolony format pliku"), false);
+    cb(null, true);
+  },
+  limits: { fileSize: 50 * 1024 * 1024 }
+});
+
+// Upload planszy
+app.post("/api/upload-scope-board/:devId", checkAuth, checkPermission("zakres"), (req, res) => {
+  scopeBoardUpload.single("board")(req, res, async (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!req.file) return res.status(400).json({ error: "Brak pliku" });
+
+    let devId = req.user.role !== "superadmin" ? req.user.devId : req.params.devId;
+    const { investId } = req.body;
+    const ext = path.extname(req.file.originalname).toLowerCase() || path.extname(req.file.filename).toLowerCase();
+    const boardFile = "plansza" + ext;
+    const boardType = ext === ".pdf" ? "pdf" : "image";
+
+    const dataPath = path.join(__dirname, "data", `${devId}.json`);
+    try {
+      await fileStore.updateJSON(dataPath, (db) => {
+        if (!db.projectScopes) db.projectScopes = {};
+        if (!db.projectScopes[investId]) db.projectScopes[investId] = { boardFile: null, boardType: null, scopes: [], boardOffset: { x: 0, y: 0 }, boardScale: 1 };
+        db.projectScopes[investId].boardFile = boardFile;
+        db.projectScopes[investId].boardType = boardType;
+        return db;
+      }, { investments: {}, investmentsMeta: {}, deletedInvestments: [] });
+      res.json({ success: true, boardFile, boardType });
+    } catch (e) {
+      res.status(500).json({ error: "Błąd zapisu" });
+    }
+  });
+});
+
+// Usunięcie planszy
+app.delete("/api/scope-board/:devId/:investId", checkAuth, checkPermission("zakres"), async (req, res) => {
+  let devId = req.user.role !== "superadmin" ? req.user.devId : req.params.devId;
+  const { investId } = req.params;
+  const dataPath = path.join(__dirname, "data", `${devId}.json`);
+  try {
+    let boardFile = null;
+    await fileStore.updateJSON(dataPath, (db) => {
+      if (db.projectScopes && db.projectScopes[investId]) {
+        boardFile = db.projectScopes[investId].boardFile;
+        db.projectScopes[investId].boardFile = null;
+        db.projectScopes[investId].boardType = null;
+      }
+      return db;
+    }, { investments: {}, investmentsMeta: {}, deletedInvestments: [] });
+
+    if (boardFile) {
+      const filePath = path.join(__dirname, "uploads", sanitize(devId), sanitize(investId), "scopes", boardFile);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: "Błąd usuwania pliku" });
+  }
+});
+
+// Odczyt zakresów
+app.get("/api/scopes/:devId", checkAuth, checkPermission("zakres"), async (req, res) => {
+  let devId = req.user.role !== "superadmin" ? req.user.devId : req.params.devId;
+  const dataPath = path.join(__dirname, "data", `${devId}.json`);
+  try {
+    const db = await fileStore.readJSON(dataPath, { investments: {}, investmentsMeta: {}, deletedInvestments: [] });
+    res.json(db.projectScopes || {});
+  } catch (e) {
+    res.status(500).json({ error: "Błąd odczytu" });
+  }
+});
+
+// Zapis zakresów
+app.post("/api/scopes/:devId", checkAuth, checkPermission("zakres"), async (req, res) => {
+  let devId = req.user.role !== "superadmin" ? req.user.devId : req.params.devId;
+  const { investId, scopeData } = req.body;
+  if (!investId || !scopeData) return res.status(400).json({ error: "Brak danych" });
+  const dataPath = path.join(__dirname, "data", `${devId}.json`);
+  try {
+    await fileStore.updateJSON(dataPath, (db) => {
+      if (!db.projectScopes) db.projectScopes = {};
+      if (!db.projectScopes[investId]) db.projectScopes[investId] = {};
+      // Zachowaj boardFile i boardType (nie nadpisuj)
+      const existing = db.projectScopes[investId] || {};
+      db.projectScopes[investId] = {
+        boardFile: existing.boardFile || null,
+        boardType: existing.boardType || null,
+        boardOffset: scopeData.boardOffset || existing.boardOffset || { x: 0, y: 0 },
+        boardScale: scopeData.boardScale !== undefined ? scopeData.boardScale : (existing.boardScale || 1),
+        scopes: scopeData.scopes || []
+      };
+      return db;
+    }, { investments: {}, investmentsMeta: {}, deletedInvestments: [] });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: "Błąd zapisu" });
   }
 });
 

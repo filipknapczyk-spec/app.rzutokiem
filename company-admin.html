@@ -132,6 +132,7 @@
         .perm-kontakty { background: rgba(249,115,22,0.15); color: #fdba74; border: 1px solid rgba(249,115,22,0.3); }
         .perm-usterki { background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.25); }
         .perm-harmonogram { background: rgba(20,184,166,0.15); color: #5eead4; border: 1px solid rgba(20,184,166,0.3); }
+        .perm-zakres { background: rgba(124,58,237,0.15); color: #c084fc; border: 1px solid rgba(124,58,237,0.3); }
 
         .btn-del {
             padding: 5px 12px; background: rgba(239,68,68,0.1);
@@ -233,6 +234,10 @@
                 <input type="checkbox" id="perm-harmonogram" value="harmonogram">
                 <span>📅 Harmonogram</span>
             </label>
+            <label class="checkbox-group">
+                <input type="checkbox" id="perm-zakres" value="zakres">
+                <span>📏 Zakres projektowy</span>
+            </label>
         </div>
         <button class="btn-add" onclick="addUser()">+ DODAJ PRACOWNIKA</button>
         <div id="add-alert" class="alert"></div>
@@ -279,8 +284,8 @@
             myCompanyName = me.name || '—';
             document.getElementById('company-name-tag').textContent = myCompanyName;
 
-        const companyApps = me.companyApps || ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company'];
-            ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram'].forEach(app => {
+        const companyApps = me.companyApps || ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company', 'zakres'];
+            ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'zakres'].forEach(app => {
                 const cb = document.getElementById(`perm-${app}`);
                 if (cb && !companyApps.includes(app)) {
                     cb.disabled = true;
@@ -310,6 +315,7 @@
                 if (p === 'kontakty') return '<span class="perm-chip perm-kontakty">📇 Kontakty</span>';
                 if (p === 'usterki') return '<span class="perm-chip perm-usterki">⚠️ Usterki</span>';
                 if (p === 'harmonogram') return '<span class="perm-chip perm-harmonogram">📅 Harmonogram</span>';
+                if (p === 'zakres') return '<span class="perm-chip perm-zakres">📏 Zakres projektowy</span>';
                 return `<span class="perm-chip">${p}</span>`;
             }).join('') || '<span style="color:#475569;font-size:12px;">brak</span>';
             return `
@@ -336,6 +342,7 @@
         if (document.getElementById('perm-kontakty').checked) permissions.push('kontakty');
         if (document.getElementById('perm-usterki').checked) permissions.push('usterki');
         if (document.getElementById('perm-harmonogram').checked) permissions.push('harmonogram');
+        if (document.getElementById('perm-zakres').checked) permissions.push('zakres');
 
         if (!name || !email || !password) return showAlert(alertEl, 'err', 'Wypełnij wszystkie pola!');
         if (permissions.length === 0) return showAlert(alertEl, 'err', 'Przyznaj przynajmniej jedno uprawnienie!');
@@ -359,6 +366,7 @@
             document.getElementById('perm-kontakty').checked = false;
             document.getElementById('perm-usterki').checked = false;
             document.getElementById('perm-harmonogram').checked = false;
+            document.getElementById('perm-zakres').checked = false;
             await init();
         } else {
             showAlert(alertEl, 'err', data.error || 'Błąd tworzenia konta');
@@ -423,11 +431,12 @@
                 { id: 'kontakty', href: '/kontakty.html', icon: '📇', name: 'Baza kontaktów', perm: 'kontakty' },
                 { id: 'usterki', href: '/usterki.html', icon: '⚠️', name: 'Panel Usterek', perm: 'usterki' },
                 { id: 'harmonogram', href: '/harmonogram.html', icon: '📅', name: 'Harmonogram', perm: 'harmonogram' },
+                { id: 'zakres', href: '/zakres.html', icon: '📏', name: 'Zakres projektowy', perm: 'zakres' },
                 { id: 'company', href: '/company-admin.html', icon: '🏢', name: 'Zarządzanie Firmą', perm: 'company' },
                 { id: 'superadmin', href: '/superadmin.html', icon: '🔑', name: 'Panel SuperAdmina', perm: 'superadmin' }
             ];
             const currentPath = window.location.pathname;
-            const companyApps = me.companyApps || ['sales', 'admin', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company'];
+            const companyApps = me.companyApps || ['sales', 'admin', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company', 'zakres'];
             nav.innerHTML = tiles.filter(t => {
                 if (t.id === 'superadmin') return me.role === 'superadmin';
                 if (me.role === 'companyAdmin') return true; // show all for company admin (grey out if no access)
