@@ -236,7 +236,7 @@
             </label>
             <label class="checkbox-group">
                 <input type="checkbox" id="perm-zakres" value="zakres">
-                <span>📏 Zakres projektowy</span>
+                <span>📏 Sieci i drogi</span>
             </label>
         </div>
         <button class="btn-add" onclick="addUser()">+ DODAJ PRACOWNIKA</button>
@@ -315,7 +315,7 @@
                 if (p === 'kontakty') return '<span class="perm-chip perm-kontakty">📇 Kontakty</span>';
                 if (p === 'usterki') return '<span class="perm-chip perm-usterki">⚠️ Usterki</span>';
                 if (p === 'harmonogram') return '<span class="perm-chip perm-harmonogram">📅 Harmonogram</span>';
-                if (p === 'zakres') return '<span class="perm-chip perm-zakres">📏 Zakres projektowy</span>';
+                if (p === 'zakres') return '<span class="perm-chip perm-zakres">📏 Sieci i drogi</span>';
                 return `<span class="perm-chip">${p}</span>`;
             }).join('') || '<span style="color:#475569;font-size:12px;">brak</span>';
             return `
@@ -431,7 +431,7 @@
                 { id: 'kontakty', href: '/kontakty.html', icon: '📇', name: 'Baza kontaktów', perm: 'kontakty' },
                 { id: 'usterki', href: '/usterki.html', icon: '⚠️', name: 'Panel Usterek', perm: 'usterki' },
                 { id: 'harmonogram', href: '/harmonogram.html', icon: '📅', name: 'Harmonogram', perm: 'harmonogram' },
-                { id: 'zakres', href: '/zakres.html', icon: '📏', name: 'Zakres projektowy', perm: 'zakres' },
+                { id: 'zakres', href: '/zakres.html', icon: '📏', name: 'Sieci i drogi', perm: 'zakres' },
                 { id: 'company', href: '/company-admin.html', icon: '🏢', name: 'Zarządzanie Firmą', perm: 'company' },
                 { id: 'superadmin', href: '/superadmin.html', icon: '🔑', name: 'Panel SuperAdmina', perm: 'superadmin' }
             ];

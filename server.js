@@ -1413,7 +1413,7 @@ app.post("/api/admin/backups/restore", checkAuth, async (req, res) => {
 });
 
 // ============================================================
-// --- ZAKRES PROJEKTOWY — PLANSZA I ZAKRESY ---
+// --- SIECI I DROGI — PLANSZA I ZAKRESY ---
 // ============================================================
 
 // Multer dla planszy zagospodarowania terenu
