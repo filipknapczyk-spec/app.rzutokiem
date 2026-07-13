@@ -13,73 +13,63 @@
             position: fixed; inset: 0; z-index: 0; pointer-events: none;
             background: radial-gradient(ellipse 60% 50% at 20% 80%, rgba(249,115,22,0.08) 0%, transparent 70%);
         }
-        /* GLOBAL HEADER */
         .header {
             height: 64px; position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
             display: flex; align-items: center; justify-content: space-between;
             padding: 0 40px; border-bottom: 1px solid rgba(255,255,255,0.06);
             background: rgba(15,17,23,0.85); backdrop-filter: blur(12px);
-            color: white; font-family: 'Inter', sans-serif;
+            color: white;
         }
-        .header-brand { display: flex; align-items: center; gap: 12px; color: inherit; cursor: default; }
+        .header-brand { display: flex; align-items: center; gap: 12px; }
         .header-icon { width: 32px; height: 32px; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         .header-icon img { width: 100%; height: 100%; object-fit: cover; }
         .header-title { font-size: 16px; font-weight: 700; }
-        
         .header-nav { display: flex; gap: 8px; background: rgba(255,255,255,0.04); padding: 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); }
         .nav-item { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; text-decoration: none; font-size: 14px; transition: all 0.2s; color: white; }
         .nav-item:hover { background: rgba(255,255,255,0.08); }
         .nav-item.active { background: rgba(255,255,255,0.1); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-        
-        .btn-header-back {
-            display: flex; align-items: center; gap: 6px;
-            padding: 6px 14px; background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
-            color: #cbd5e1; font-size: 13px; font-weight: 500; text-decoration: none;
-            transition: all 0.2s; margin-right: 12px;
-        }
+        .btn-header-back { display: flex; align-items: center; gap: 6px; padding: 6px 14px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #cbd5e1; font-size: 13px; font-weight: 500; text-decoration: none; transition: all 0.2s; margin-right: 12px; }
         .btn-header-back:hover { background: rgba(255,255,255,0.12); color: white; border-color: rgba(255,255,255,0.2); }
-
         .header-user { display: flex; align-items: center; gap: 12px; }
         .user-avatar { width: 32px; height: 32px; background: linear-gradient(135deg, #6366f1, #a855f7); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
-        .main { position: relative; z-index: 1; max-width: 1000px; margin: 40px auto; padding: 0 32px 60px; }
-        .card {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 16px; padding: 28px; margin-bottom: 28px;
-        }
-        .card-title {
-            font-size: 13px; font-weight: 700; color: #94a3b8;
-            text-transform: uppercase; letter-spacing: 0.8px;
-            margin-bottom: 20px; padding-bottom: 14px;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-        }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: flex-end; margin-bottom: 20px; }
-        .field-group { display: flex; flex-direction: column; gap: 6px; }
-        .field-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; }
-        .field-input, select {
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px; color: #f1f5f9; padding: 10px; font-size: 13px; outline: none;
-        }
-        .btn-add {
-            background: linear-gradient(135deg, #f97316, #ea580c);
-            color: white; border: none; border-radius: 8px;
-            padding: 11px 20px; font-size: 13px; font-weight: 700; cursor: pointer;
-        }
+        
+        .main { position: relative; z-index: 1; max-width: 1100px; margin: 40px auto; padding: 0 32px 60px; }
+        .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 28px; margin-bottom: 28px; }
+        .card-title { font-size: 13px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; }
+        
+        .btn-add { background: linear-gradient(135deg, #f97316, #ea580c); color: white; border: none; border-radius: 8px; padding: 11px 20px; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.2s opacity; }
+        .btn-add:hover { opacity: 0.9; }
+        .btn-cancel { background: rgba(255,255,255,0.06); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 11px 20px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s background; }
+        .btn-cancel:hover { background: rgba(255,255,255,0.1); }
+        
         .search-row { margin-bottom: 20px; }
-        .search-input {
-            width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white;
-        }
+        .search-input { width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: white; outline:none; }
+        
         table { width: 100%; border-collapse: collapse; }
         th { text-align: left; padding: 12px; font-size: 11px; color: #64748b; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.06); }
-        td { padding: 16px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 14px; }
-        .role-badge {
-            font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px;
-            background: rgba(255,255,255,0.06); color: #cbd5e1;
-        }
+        td { padding: 16px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 14px; vertical-align: top;}
         .contact-name { font-weight: 700; display: block; }
-        .contact-info { font-size: 12px; color: #64748b; }
+        .contact-info { font-size: 12px; color: #64748b; margin-top:4px;}
+        .role-badge { display:inline-block; font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 6px; background: rgba(255,255,255,0.06); color: #cbd5e1; margin-top: 4px;}
+        .action-btn { background:none; border:none; color:#38bdf8; cursor:pointer; font-size: 13px; font-weight: 600; margin-right:12px; }
+        .action-btn.delete { color: #f87171; }
+        .action-btn:hover { text-decoration: underline; }
+        
+        /* Modal */
+        .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); z-index:2000; align-items:center; justify-content:center; }
+        .modal.active { display:flex; }
+        .modal-content { background:#1e293b; border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:32px; width:100%; max-width:600px; max-height:90vh; overflow-y:auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 24px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:16px;}
+        
+        .field-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+        .field-label { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; }
+        .field-input { background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; padding: 10px 14px; font-size: 14px; outline: none; }
+        .field-input:focus { border-color: #f97316; }
+
+        .perm-table { width: 100%; margin-top: 10px; }
+        .perm-table th { padding: 8px; font-size:10px; }
+        .perm-table td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.03); vertical-align: middle; font-size:13px; }
+        .perm-radio { accent-color: #f97316; cursor:pointer;}
     </style>
 </head>
 <body>
@@ -91,9 +81,7 @@
     </div>
     <div style="display: flex; align-items: center;">
         <a href="/dashboard.html" class="btn-header-back">← Powrót</a>
-        <nav class="header-nav" id="header-nav">
-            <!-- Ikony renderowane przez JS -->
-        </nav>
+        <nav class="header-nav" id="header-nav"></nav>
     </div>
     <div class="header-user">
         <div class="user-avatar" id="user-avatar">?</div>
@@ -101,108 +89,307 @@
 </header>
 <main class="main">
     <div class="card">
-        <div class="card-title">Dodaj kontakt</div>
-        <div class="form-row">
-            <div class="field-group">
-                <label class="field-label">Imię i Nazwisko / Firma</label>
-                <input type="text" id="c-name" class="field-input" placeholder="np. Jan Kowalski">
-            </div>
-            <div class="field-group">
-                <label class="field-label">Funkcja / Zadanie</label>
-                <input type="text" id="c-role" class="field-input" placeholder="np. Kierownik budowy">
-            </div>
-            <div class="field-group">
-                <label class="field-label">Telefon / E-mail</label>
-                <input type="text" id="c-contact" class="field-input" placeholder="np. 500 600 700">
-            </div>
-            <button class="btn-add" onclick="addContact()">DODAJ</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom:14px;">
+            <div class="card-title" style="margin:0; border:none; padding:0;">Lista kontaktów</div>
+            <button class="btn-add" onclick="openContactModal()">+ Dodaj kontakt</button>
         </div>
-    </div>
-    <div class="card">
-        <div class="card-title">Lista uczestników</div>
         <div class="search-row">
-            <input type="text" class="search-input" placeholder="Szukaj po nazwie lub funkcji..." onkeyup="filterTable(this.value)">
+            <input type="text" id="search-input" class="search-input" placeholder="Szukaj po e-mailu, nazwisku lub funkcji..." onkeyup="renderContacts()">
         </div>
         <table>
             <thead>
                 <tr>
-                    <th>Nazwa</th>
-                    <th>Funkcja</th>
                     <th>Kontakt</th>
+                    <th>Firma zewn.</th>
+                    <th>Funkcja</th>
+                    <th>Uprawnienia</th>
                     <th>Akcje</th>
                 </tr>
             </thead>
-            <tbody id="contact-list">
-                <tr>
-                    <td><span class="contact-name">Adam Projektowy</span></td>
-                    <td><span class="role-badge">Architekt</span></td>
-                    <td class="contact-info">adam@biuro.pl | 123-456-789</td>
-                    <td><button style="background:none; border:none; color:#f87171; cursor:pointer;" onclick="this.closest('tr').remove()">Usuń</button></td>
-                </tr>
-                <tr>
-                    <td><span class="contact-name">Zygmunt Beton</span></td>
-                    <td><span class="role-badge">Wykonawca Żelbetu</span></td>
-                    <td class="contact-info">biuro@betonex.pl | 987-654-321</td>
-                    <td><button style="background:none; border:none; color:#f87171; cursor:pointer;" onclick="this.closest('tr').remove()">Usuń</button></td>
-                </tr>
-            </tbody>
+            <tbody id="contact-list"></tbody>
         </table>
     </div>
 </main>
-<script>
-    function addContact() {
-        const name = document.getElementById('c-name').value;
-        const role = document.getElementById('c-role').value;
-        const info = document.getElementById('c-contact').value;
-        if(!name) return alert("Podaj nazwę!");
+
+<div id="contact-modal" class="modal">
+    <div class="modal-content">
+        <h3 class="modal-title" id="modal-title">Dodaj kontakt</h3>
+        <input type="hidden" id="c-id">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="field-group">
+                <label class="field-label">Imię i Nazwisko</label>
+                <input type="text" id="c-name" class="field-input">
+            </div>
+            <div class="field-group">
+                <label class="field-label">Adres e-mail (Login)</label>
+                <input type="email" id="c-email" class="field-input">
+            </div>
+            <div class="field-group">
+                <label class="field-label">Telefon</label>
+                <input type="text" id="c-phone" class="field-input">
+            </div>
+            <div class="field-group">
+                <label class="field-label">Nowe Hasło</label>
+                <input type="password" id="c-password" class="field-input" placeholder="Min. 4 znaki (zostaw puste by nie zmieniać)">
+            </div>
+            <div class="field-group">
+                <label class="field-label">Firma Zewnętrzna</label>
+                <input type="text" id="c-ext-company" class="field-input" placeholder="np. Archicom Sp. z o.o.">
+            </div>
+            <div class="field-group">
+                <label class="field-label">Funkcja / Zadanie</label>
+                <input type="text" id="c-role" class="field-input" placeholder="np. Inspektor Nadzoru">
+            </div>
+        </div>
         
-        const tbody = document.getElementById('contact-list');
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><span class="contact-name">${name}</span></td>
-            <td><span class="role-badge">${role}</span></td>
-            <td class="contact-info">${info}</td>
-            <td><button style="background:none; border:none; color:#f87171; cursor:pointer;" onclick="this.closest('tr').remove()">Usuń</button></td>
-        `;
-        tbody.prepend(tr);
-        document.getElementById('c-name').value = '';
-        document.getElementById('c-role').value = '';
-        document.getElementById('c-contact').value = '';
+        <h4 style="margin-top:24px; font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Dostęp do paneli</h4>
+        <table class="perm-table">
+            <thead>
+                <tr>
+                    <th>Panel</th>
+                    <th style="text-align:center;">Edycja</th>
+                    <th style="text-align:center;">Podgląd</th>
+                    <th style="text-align:center;">Brak</th>
+                </tr>
+            </thead>
+            <tbody id="perm-list"></tbody>
+        </table>
+
+        <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:32px;">
+            <button class="btn-cancel" onclick="closeContactModal()">Anuluj</button>
+            <button class="btn-add" onclick="saveContact()">Zapisz</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let contacts = [];
+    let meData = null;
+    let availableApps = [];
+
+    const appNames = {
+        admin: "Edytor sprzedaży",
+        company: "Zarządzanie Firmą",
+        harmonogram: "Harmonogram",
+        inwestycje: "Inwestycje",
+        kontakty: "Baza kontaktów",
+        projekt: "Projekt",
+        sales: "Panel Sprzedaży",
+        usterki: "Panel Usterek",
+        zakres: "Sieci i drogi"
+    };
+
+    async function loadContacts() {
+        try {
+            const res = await fetch('/api/contacts');
+            if (res.ok) {
+                contacts = await res.json();
+                renderContacts();
+            }
+        } catch(e) { console.error(e); }
     }
-    
-    function filterTable(val) {
-        const rows = document.querySelectorAll('#contact-list tr');
-        val = val.toLowerCase();
-        rows.forEach(row => {
-            const text = row.innerText.toLowerCase();
-            row.style.display = text.includes(val) ? '' : 'none';
+
+    function renderContacts() {
+        const query = document.getElementById('search-input').value.toLowerCase();
+        const tbody = document.getElementById('contact-list');
+        tbody.innerHTML = '';
+        
+        contacts.forEach(c => {
+            if (query && !c.name.toLowerCase().includes(query) && !c.email.toLowerCase().includes(query) && !(c.role || "").toLowerCase().includes(query)) return;
+            
+            const permsText = Object.entries(c.permissions || {})
+                .filter(([app, level]) => level !== "none")
+                .map(([app, level]) => {
+                    const label = appNames[app] || app;
+                    return level === "edit" ? `<span style="color:#4ade80">${label} (E)</span>` : `<span style="color:#60a5fa">${label} (P)</span>`;
+                }).join(', ');
+                
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>
+                    <span class="contact-name">${c.name}</span>
+                    <div class="contact-info">${c.email} | ${c.phone || '-'}</div>
+                </td>
+                <td>${c.externalCompany || '-'}</td>
+                <td>${c.role ? `<span class="role-badge">${c.role}</span>` : '-'}</td>
+                <td style="font-size:12px;">${permsText || '<span style="color:#ef4444">Brak dostępu</span>'}</td>
+                <td>
+                    <button class="action-btn" onclick='editContact(${JSON.stringify(c).replace(/'/g, "&#39;")})'>Edytuj</button>
+                    <button class="action-btn delete" onclick="deleteContact('${c.id}')">Usuń</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
         });
     }
+
+    function openContactModal() {
+        document.getElementById('c-id').value = '';
+        document.getElementById('c-name').value = '';
+        document.getElementById('c-email').value = '';
+        document.getElementById('c-email').readOnly = false;
+        document.getElementById('c-password').value = '';
+        document.getElementById('c-ext-company').value = '';
+        document.getElementById('c-role').value = '';
+        document.getElementById('c-phone').value = '';
+        document.getElementById('modal-title').innerText = 'Dodaj kontakt';
+        renderPermissions({});
+        document.getElementById('contact-modal').classList.add('active');
+    }
+
+    function editContact(c) {
+        document.getElementById('c-id').value = c.id;
+        document.getElementById('c-name').value = c.name;
+        document.getElementById('c-email').value = c.email;
+        document.getElementById('c-email').readOnly = true; // nie zmieniamy loginu
+        document.getElementById('c-password').value = '';
+        document.getElementById('c-ext-company').value = c.externalCompany || '';
+        document.getElementById('c-role').value = c.role || '';
+        document.getElementById('c-phone').value = c.phone || '';
+        document.getElementById('modal-title').innerText = 'Edytuj kontakt';
+        renderPermissions(c.permissions || {});
+        document.getElementById('contact-modal').classList.add('active');
+    }
+
+    function renderPermissions(userPerms) {
+        const tbody = document.getElementById('perm-list');
+        tbody.innerHTML = '';
+        availableApps.forEach(app => {
+            const level = userPerms[app] || "none";
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${appNames[app] || app}</td>
+                <td style="text-align:center;"><input type="radio" name="perm_${app}" value="edit" class="perm-radio" ${level === 'edit' ? 'checked' : ''}></td>
+                <td style="text-align:center;"><input type="radio" name="perm_${app}" value="view" class="perm-radio" ${level === 'view' ? 'checked' : ''}></td>
+                <td style="text-align:center;"><input type="radio" name="perm_${app}" value="none" class="perm-radio" ${level === 'none' ? 'checked' : ''}></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function closeContactModal() {
+        document.getElementById('contact-modal').classList.remove('active');
+    }
+
+    async function saveContact() {
+        const email = document.getElementById('c-email').value;
+        const name = document.getElementById('c-name').value;
+        if (!email || !name) return alert("Imię, Nazwisko i E-mail są wymagane.");
+        
+        const payload = {
+            email, name,
+            password: document.getElementById('c-password').value,
+            externalCompany: document.getElementById('c-ext-company').value,
+            role: document.getElementById('c-role').value,
+            phone: document.getElementById('c-phone').value,
+            permissions: {},
+            companyId: meData.companyId
+        };
+        
+        availableApps.forEach(app => {
+            const radio = document.querySelector(`input[name="perm_${app}"]:checked`);
+            if (radio) payload.permissions[app] = radio.value;
+        });
+
+        try {
+            const res = await fetch('/api/contacts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.error) return alert(data.error);
+            closeContactModal();
+            loadContacts();
+        } catch(e) { alert("Błąd zapisu"); }
+    }
+
+    async function deleteContact(id) {
+        if (!confirm("Czy na pewno chcesz usunąć ten kontakt z firmy?")) return;
+        try {
+            const res = await fetch('/api/contacts/' + id + '?companyId=' + meData.companyId, { method: 'DELETE' });
+            if (res.ok) loadContacts();
+            else { const err = await res.json(); alert(err.error); }
+        } catch(e) { console.error(e); }
+    }
+
     async function initHeader() {
         try {
             const res = await fetch('/api/me');
             if (!res.ok) return;
             const me = await res.json();
+            meData = me;
+            
+            // Generate available apps (sort alphabetically by UI name)
+            availableApps = me.companyApps || [];
+            availableApps.sort((a, b) => (appNames[a] || a).localeCompare(appNames[b] || b));
+            
+            // [COMPANY-SWITCH-INJECT]
+            if (me.availableCompanies && me.availableCompanies.length > 1) {
+                if (!window.switchCompany) {
+                    window.switchCompany = async function(companyId) {
+                        await fetch('/api/switch-company', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': (typeof csrfToken !== 'undefined' ? csrfToken : '') },
+                            body: JSON.stringify({ companyId })
+                        });
+                        window.location.reload();
+                    };
+                }
+                if (!document.getElementById('comp-switch-style')) {
+                    const style = document.createElement('style');
+                    style.id = 'comp-switch-style';
+                    style.textContent = `
+                        .company-switch-select {
+                            background: rgba(255,255,255,0.06);
+                            border: 1px solid rgba(255,255,255,0.15);
+                            color: #f1f5f9;
+                            border-radius: 8px;
+                            padding: 6px 12px;
+                            font-size: 13px;
+                            font-family: inherit;
+                            outline: none;
+                            margin-right: 12px;
+                            cursor: pointer;
+                        }
+                        .company-switch-select option { background: #1e293b; color: white; }
+                    `;
+                    document.head.appendChild(style);
+                }
+                const selectHtml = `<select onchange="window.switchCompany(this.value)" class="company-switch-select">` + 
+                    me.availableCompanies.map(c => `<option value="${c.companyId}" ${c.companyId === me.companyId ? 'selected' : ''}>${c.companyName}</option>`).join('') +
+                `</select>`;
+                
+                const headerUser = document.querySelector('.header-user');
+                if (headerUser && !document.querySelector('.company-switch-select')) {
+                    const avatar = document.getElementById('user-avatar');
+                    if (avatar) avatar.insertAdjacentHTML('beforebegin', selectHtml);
+                    else headerUser.insertAdjacentHTML('afterbegin', selectHtml);
+                }
+            }
+            // [/COMPANY-SWITCH-INJECT]
+
             document.getElementById('user-avatar').textContent = (me.name || me.email || '?')[0].toUpperCase();
             const nav = document.getElementById('header-nav');
             const tiles = [
                 { id: 'sales', href: '/developer.html', icon: '📈', name: 'Panel Sprzedaży', perm: 'sales' },
+                { id: 'inwestycje', href: '/inwestycje.html', icon: '🏢', name: 'Inwestycje', perm: 'inwestycje' },
                 { id: 'admin', href: '/admin.html', icon: '✏️', name: 'Edytor sprzedaży', perm: 'admin' },
                 { id: 'projekt', href: '/projekt.html', icon: '📁', name: 'Projekt', perm: 'projekt' },
                 { id: 'kontakty', href: '/kontakty.html', icon: '📇', name: 'Baza kontaktów', perm: 'kontakty' },
                 { id: 'usterki', href: '/usterki.html', icon: '⚠️', name: 'Panel Usterek', perm: 'usterki' },
                 { id: 'harmonogram', href: '/harmonogram.html', icon: '📅', name: 'Harmonogram', perm: 'harmonogram' },
+                { id: 'zakres', href: '/zakres.html', icon: '📐', name: 'Sieci i drogi', perm: 'zakres' },
                 { id: 'company', href: '/company-admin.html', icon: '🏢', name: 'Zarządzanie Firmą', perm: 'company' },
                 { id: 'superadmin', href: '/superadmin.html', icon: '🔑', name: 'Panel SuperAdmina', perm: 'superadmin' }
             ];
             const currentPath = window.location.pathname;
-                        const companyApps = me.companyApps || ['sales', 'admin', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company'];
+            const companyApps = me.companyApps || ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company', 'zakres'];
             nav.innerHTML = tiles.filter(t => {
                 if (t.id === 'superadmin') return me.role === 'superadmin';
                 if (me.role === 'companyAdmin') return true;
                 if (t.id === 'company') return me.role === 'superadmin';
                 if (me.role === 'superadmin') return true;
-                return (me.permissions || []).includes(t.perm);
+                return (me.permissions && me.permissions[t.perm] && me.permissions[t.perm] !== 'none');
             }).map(t => {
                 const companyHasApp = (me.role === 'superadmin') || companyApps.includes(t.perm);
                 if (!companyHasApp && me.role !== 'superadmin') {
@@ -210,6 +397,9 @@
                 }
                 return `<a href="${t.href}" class="nav-item ${currentPath.includes(t.href) ? 'active' : ''}" title="${t.name}">${t.icon}</a>`;
             }).join('');
+            
+            // Only load contacts after we have meData
+            loadContacts();
         } catch (e) { console.error(e); }
     }
     initHeader();

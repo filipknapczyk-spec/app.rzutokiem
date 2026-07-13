@@ -187,80 +187,11 @@
         <div id="pass-alert" class="alert"></div>
     </div>
 
-    <!-- DODAJ PRACOWNIKA -->
-    <div class="card">
-        <div class="card-title">👤 Dodaj pracownika</div>
-        <div class="form-row">
-            <div>
-                <label class="field-label">Imię i nazwisko</label>
-                <input type="text" id="usr-name" class="field-input" placeholder="Jan Kowalski">
-            </div>
-            <div>
-                <label class="field-label">E-mail (login)</label>
-                <input type="email" id="usr-email" class="field-input" placeholder="jan@firma.pl">
-            </div>
-            <div>
-                <label class="field-label">Hasło startowe</label>
-                <input type="text" id="usr-pass" class="field-input" placeholder="Hasło tymczasowe">
-            </div>
-        </div>
-        <div class="permissions-row">
-            <span class="perm-label">Uprawnienia:</span>
-            <label class="checkbox-group">
-                <input type="checkbox" id="perm-sales" value="sales">
-                <span>📈 Panel Sprzedaży</span>
-            </label>
-            <label class="checkbox-group">
-                <input type="checkbox" id="perm-inwestycje" value="inwestycje">
-                <span>🏗️ Inwestycje</span>
-            </label>
-            <label class="checkbox-group">
-                <input type="checkbox" id="perm-admin" value="admin">
-                <span>🗂️ Zasoby</span>
-            </label>
-            <label class="checkbox-group">
-                <input type="checkbox" id="perm-projekt" value="projekt">
-                <span>📁 Projekt</span>
-            </label>
-            <label class="checkbox-group">
-                <input type="checkbox" id="perm-kontakty" value="kontakty">
-                <span>📇 Kontakty</span>
-            </label>
-            <label class="checkbox-group">
-                <input type="checkbox" id="perm-usterki" value="usterki">
-                <span>⚠️ Usterki</span>
-            </label>
-            <label class="checkbox-group">
-                <input type="checkbox" id="perm-harmonogram" value="harmonogram">
-                <span>📅 Harmonogram</span>
-            </label>
-            <label class="checkbox-group">
-                <input type="checkbox" id="perm-zakres" value="zakres">
-                <span>📏 Sieci i drogi</span>
-            </label>
-        </div>
-        <button class="btn-add" onclick="addUser()">+ DODAJ PRACOWNIKA</button>
-        <div id="add-alert" class="alert"></div>
-    </div>
-
-    <!-- LISTA PRACOWNIKÓW -->
-    <div class="card">
-        <div class="card-title">📋 Pracownicy firmy</div>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Imię i nazwisko</th>
-                        <th>E-mail</th>
-                        <th>Uprawnienia</th>
-                        <th>Akcje</th>
-                    </tr>
-                </thead>
-                <tbody id="user-list">
-                    <tr><td colspan="4" class="empty-state">Ładowanie...</td></tr>
-                </tbody>
-            </table>
-        </div>
+    <!-- ZARZĄDZANIE PRACOWNIKAMI -> PRZEKIEROWANIE -->
+    <div class="card" style="text-align: center; padding: 40px;">
+        <h2 style="margin-bottom:16px;">👤 Zarządzanie dostępem i pracownikami</h2>
+        <p style="color:#94a3b8; margin-bottom:24px;">Zarządzanie pracownikami oraz współpracownikami zostało przeniesione do nowej Bazy Kontaktów.</p>
+        <a href="/kontakty.html" class="btn-change" style="text-decoration:none; display:inline-block; padding:12px 24px; font-size:14px;">Przejdź do Bazy Kontaktów →</a>
     </div>
 
 </main>
@@ -283,20 +214,6 @@
             const me = await meRes.json();
             myCompanyName = me.name || '—';
             document.getElementById('company-name-tag').textContent = myCompanyName;
-
-        const companyApps = me.companyApps || ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'company', 'zakres'];
-            ['sales', 'admin', 'inwestycje', 'projekt', 'kontakty', 'usterki', 'harmonogram', 'zakres'].forEach(app => {
-                const cb = document.getElementById(`perm-${app}`);
-                if (cb && !companyApps.includes(app)) {
-                    cb.disabled = true;
-                    cb.parentElement.style.opacity = '0.3';
-                    cb.parentElement.style.cursor = 'not-allowed';
-                    cb.parentElement.title = 'Aplikacja niedostępna dla Twojej firmy';
-                }
-            });
-
-            if (usersRes.ok) users = await usersRes.json();
-            renderList();
         } catch (e) { console.error(e); }
     }
 
@@ -421,6 +338,51 @@
             const res = await fetch('/api/me');
             if (!res.ok) return;
             const me = await res.json();
+            // [COMPANY-SWITCH-INJECT]
+            if (me.availableCompanies && me.availableCompanies.length > 1) {
+                if (!window.switchCompany) {
+                    window.switchCompany = async function(companyId) {
+                        await fetch('/api/switch-company', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': (typeof csrfToken !== 'undefined' ? csrfToken : '') },
+                            body: JSON.stringify({ companyId })
+                        });
+                        window.location.reload();
+                    };
+                }
+                if (!document.getElementById('comp-switch-style')) {
+                    const style = document.createElement('style');
+                    style.id = 'comp-switch-style';
+                    style.textContent = `
+                        .company-switch-select {
+                            background: rgba(255,255,255,0.06);
+                            border: 1px solid rgba(255,255,255,0.15);
+                            color: #f1f5f9;
+                            border-radius: 8px;
+                            padding: 6px 12px;
+                            font-size: 13px;
+                            font-family: inherit;
+                            outline: none;
+                            margin-right: 12px;
+                            cursor: pointer;
+                        }
+                        .company-switch-select option { background: #1e293b; color: white; }
+                    `;
+                    document.head.appendChild(style);
+                }
+                const selectHtml = `<select onchange="window.switchCompany(this.value)" class="company-switch-select">` + 
+                    me.availableCompanies.map(c => `<option value="${c.companyId}" ${c.companyId === me.companyId ? 'selected' : ''}>${c.companyName}</option>`).join('') +
+                `</select>`;
+                
+                const headerUser = document.querySelector('.header-user');
+                if (headerUser && !document.querySelector('.company-switch-select')) {
+                    const avatar = document.getElementById('user-avatar');
+                    if (avatar) avatar.insertAdjacentHTML('beforebegin', selectHtml);
+                    else headerUser.insertAdjacentHTML('afterbegin', selectHtml);
+                }
+            }
+            // [/COMPANY-SWITCH-INJECT]
+
             document.getElementById('user-avatar').textContent = (me.name || me.email || '?')[0].toUpperCase();
             const nav = document.getElementById('header-nav');
             const tiles = [
@@ -442,7 +404,7 @@
                 if (me.role === 'companyAdmin') return true; // show all for company admin (grey out if no access)
                 if (t.id === 'company') return me.role === 'superadmin';
                 if (me.role === 'superadmin') return true;
-                return (me.permissions || []).includes(t.perm);
+                return (me.permissions && me.permissions[t.perm] && me.permissions[t.perm] !== 'none');
             }).map(t => {
                 const companyHasApp = (me.role === 'superadmin') || companyApps.includes(t.perm);
                 if (!companyHasApp && me.role === 'companyAdmin') {

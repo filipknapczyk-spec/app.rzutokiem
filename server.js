@@ -66,19 +66,49 @@ if (!fs.existsSync(usersPath)) fs.writeFileSync(usersPath, "[]");
 
 const fileStore = require("./fileStore");
 
-// Pomocnicze: sprawdzenie unikalności e-maila w całej aplikacji
-async function isEmailTaken(email, excludeId = null) {
+// Pomocnicze: sprawdzenie unikalności e-maila w całej aplikacji dla kont firmowych
+async function isCompanyAdminEmail(email, excludeId = null) {
   const normalized = email.toLowerCase();
   const companies = await fileStore.readJSON(companiesPath, []);
-  const users = await fileStore.readJSON(usersPath, []);
-  const inCompanies = companies.some(
-    (c) => c.adminEmail === normalized && c.id !== excludeId,
-  );
-  const inUsers = users.some(
-    (u) => u.email === normalized && u.id !== excludeId,
-  );
-  return inCompanies || inUsers;
+  return companies.some((c) => c.adminEmail === normalized && c.id !== excludeId);
 }
+
+// Migracja: konwersja starych użytkowników do nowego formatu wielofirmowego
+(async function migrateUsers() {
+  try {
+    let users = await fileStore.readJSON(usersPath, []);
+    let modified = false;
+    users = users.map(u => {
+      if (!u.companies) {
+        modified = true;
+        const perms = {};
+        if (Array.isArray(u.permissions)) {
+          u.permissions.forEach(p => perms[p] = "edit");
+        }
+        return {
+          id: u.id,
+          email: u.email,
+          password: u.password,
+          companies: [
+            {
+              companyId: u.companyId,
+              name: u.name,
+              externalCompany: "Wewnętrzny",
+              role: "Pracownik",
+              phone: "-",
+              permissions: perms
+            }
+          ]
+        };
+      }
+      return u;
+    });
+    if (modified) {
+      await fileStore.writeJSON(usersPath, users);
+      console.log("Migrated users.json to multi-company format.");
+    }
+  } catch(e) { console.error("Migration error", e); }
+})();
 
 // --- MIDDLEWARE AUTORYZACJI ---
 const checkAuth = (req, res, next) => {
@@ -104,8 +134,12 @@ const checkPermission = (perm) => (req, res, next) => {
   const u = req.user;
   if (u.role === "superadmin") return next();
   if (u.role === "companyAdmin") return next();
-  if (u.role === "user" && u.permissions && u.permissions.includes(perm))
-    return next();
+  if (u.role === "user" && u.permissions) {
+    const p = u.permissions[perm];
+    if (p === "edit") return next();
+    if (p === "view" && req.method === "GET") return next();
+    if (p === "view" && req.accepts("html")) return next();
+  }
   if (req.accepts("html")) return res.redirect("/dashboard.html");
   return res.status(403).json({ error: "Brak uprawnień" });
 };
@@ -275,21 +309,23 @@ app.post("/api/login", loginLimiter, async (req, res) => {
     }
   }
 
-  // 3. Pracownik firmy (e-mail w users.json)
+  // 3. Pracownik firmy / Kontakt (e-mail w users.json)
   if (!user) {
     const users = await fileStore.readJSON(usersPath, []);
     const found = users.find((u) => u.email === login.toLowerCase());
-    if (found) {
+    if (found && found.companies && found.companies.length > 0) {
       const match = await bcrypt.compare(password, found.password);
-      if (match)
+      if (match) {
+        const activeComp = found.companies[0];
         user = {
           role: "user",
-          companyId: found.companyId,
           userId: found.id,
           email: found.email,
-          name: found.name,
-          permissions: found.permissions || [],
+          companyId: activeComp.companyId,
+          name: activeComp.name,
+          permissions: activeComp.permissions || {},
         };
+      }
     }
   }
 
@@ -310,6 +346,31 @@ app.post("/api/login", loginLimiter, async (req, res) => {
 
 app.post("/api/logout", (req, res) => {
   res.clearCookie("authToken");
+  res.json({ success: true });
+});
+
+app.post("/api/switch-company", checkAuth, async (req, res) => {
+  if (req.user.role !== "user") return res.json({ success: true });
+  const { companyId } = req.body;
+  const users = await fileStore.readJSON(usersPath, []);
+  const found = users.find((u) => u.id === req.user.userId);
+  if (!found || !found.companies) return res.status(403).json({ error: "Brak dostępu" });
+  
+  const targetComp = found.companies.find(c => c.companyId === companyId);
+  if (!targetComp) return res.status(403).json({ error: "Brak dostępu do firmy" });
+
+  const newUserToken = {
+    ...req.user,
+    companyId: targetComp.companyId,
+    name: targetComp.name,
+    permissions: targetComp.permissions || {}
+  };
+  
+  const cookieOptions = {
+    httpOnly: true, signed: true, maxAge: 24 * 60 * 60 * 1000,
+    secure: IS_PRODUCTION, sameSite: IS_PRODUCTION ? "strict" : "lax"
+  };
+  res.cookie("authToken", newUserToken, cookieOptions);
   res.json({ success: true });
 });
 
@@ -365,6 +426,21 @@ app.get("/api/me", checkAuth, async (req, res) => {
     } catch (e) {}
   }
 
+  let availableCompanies = [];
+  if (u.role === "user") {
+    try {
+      const users = await fileStore.readJSON(usersPath, []);
+      const found = users.find(usr => usr.id === u.userId);
+      if (found && found.companies) {
+        const companiesData = await fileStore.readJSON(companiesPath, []);
+        availableCompanies = found.companies.map(c => {
+          const cData = companiesData.find(cd => cd.id === c.companyId);
+          return { companyId: c.companyId, companyName: cData ? cData.name : c.companyId };
+        });
+      }
+    } catch(e) {}
+  }
+
   res.json({
     role: u.role,
     name: u.name,
@@ -372,8 +448,9 @@ app.get("/api/me", checkAuth, async (req, res) => {
     companyId: u.companyId || null,
     devId: u.devId || null,
     userId: u.userId || null,
-    permissions: u.permissions || [],
+    permissions: u.permissions || {},
     companyApps: companyApps,
+    availableCompanies: availableCompanies
   });
 });
 
@@ -622,70 +699,98 @@ app.post(
 );
 
 // ============================================================
-// --- ZARZĄDZANIE PRACOWNIKAMI (CompanyAdmin / SuperAdmin) ---
+// --- BAZA KONTAKTÓW (CompanyAdmin / SuperAdmin) ---
 // ============================================================
 
-app.get("/api/users", checkAuth, async (req, res) => {
+app.get("/api/contacts", checkAuth, async (req, res) => {
   if (req.user.role !== "superadmin" && req.user.role !== "companyAdmin")
     return res.status(403).json({ error: "Brak uprawnień" });
+  
   const users = await fileStore.readJSON(usersPath, []);
-  const filtered =
-    req.user.role === "superadmin"
-      ? users
-      : users.filter((u) => u.companyId === req.user.companyId);
-  res.json(
-    filtered.map((u) => ({
-      id: u.id,
-      companyId: u.companyId,
-      email: u.email,
-      name: u.name,
-      permissions: u.permissions,
-    })),
-  );
+  let contacts = [];
+
+  users.forEach(u => {
+    if (u.companies) {
+      u.companies.forEach(c => {
+        if (req.user.role === "superadmin" || c.companyId === req.user.companyId) {
+          contacts.push({
+            id: u.id,
+            email: u.email,
+            companyId: c.companyId,
+            name: c.name,
+            externalCompany: c.externalCompany,
+            role: c.role,
+            phone: c.phone,
+            permissions: c.permissions || {}
+          });
+        }
+      });
+    }
+  });
+
+  res.json(contacts);
 });
 
-app.post("/api/users", checkAuth, async (req, res) => {
+app.post("/api/contacts", checkAuth, async (req, res) => {
   if (req.user.role !== "superadmin" && req.user.role !== "companyAdmin")
     return res.status(403).json({ error: "Brak uprawnień" });
-  let { companyId, email, password, name, permissions } = req.body;
+    
+  let { companyId, email, password, name, externalCompany, role, phone, permissions } = req.body;
   if (req.user.role === "companyAdmin") companyId = req.user.companyId;
-  if (!email || !password || !name || !companyId)
-    return res.status(400).json({ error: "Wypełnij wszystkie pola" });
-    
-  const isTaken = await isEmailTaken(email);
-  if (isTaken)
-    return res.status(409).json({ error: "Ten e-mail jest już zajęty" });
-    
-  const hashed = await bcrypt.hash(password, 10);
   
-  await fileStore.updateJSON(usersPath, (users) => {
-    users.push({
-      id: "USR_" + Date.now(),
-      companyId,
-      email: email.toLowerCase(),
-      password: hashed,
-      name,
-      permissions: permissions || [],
-    });
-    return users;
-  }, []);
+  if (!email || !name || !companyId)
+    return res.status(400).json({ error: "Wypełnij wymagane pola (email, imię i nazwisko)" });
+    
+  const isTakenByAdmin = await isCompanyAdminEmail(email);
+  if (isTakenByAdmin) return res.status(409).json({ error: "Ten e-mail należy do administratora firmy i nie może być dodany jako kontakt." });
   
-  res.json({ success: true });
+  let hashed = null;
+  if (password && password.length >= 4) {
+    hashed = await bcrypt.hash(password, 10);
+  }
+  
+  try {
+    await fileStore.updateJSON(usersPath, (users) => {
+      let user = users.find(u => u.email === email.toLowerCase());
+      if (user) {
+        if (!user.companies) user.companies = [];
+        const compIndex = user.companies.findIndex(c => c.companyId === companyId);
+        const profile = { companyId, name, externalCompany: externalCompany || "", role: role || "", phone: phone || "", permissions: permissions || {} };
+        if (compIndex >= 0) user.companies[compIndex] = profile;
+        else user.companies.push(profile);
+        
+        if (hashed) user.password = hashed;
+      } else {
+        if (!hashed) throw new Error("NEW_USER_NO_PASSWORD");
+        users.push({
+          id: "USR_" + Date.now(),
+          email: email.toLowerCase(),
+          password: hashed,
+          companies: [{ companyId, name, externalCompany: externalCompany || "", role: role || "", phone: phone || "", permissions: permissions || {} }]
+        });
+      }
+      return users;
+    }, []);
+    res.json({ success: true });
+  } catch(e) {
+    if (e.message === "NEW_USER_NO_PASSWORD") return res.status(400).json({ error: "Hasło jest wymagane dla nowego loginu (min. 4 znaki)" });
+    res.status(500).json({ error: "Błąd bazy danych" });
+  }
 });
 
-app.delete("/api/users/:id", checkAuth, async (req, res) => {
+app.delete("/api/contacts/:id", checkAuth, async (req, res) => {
   if (req.user.role !== "superadmin" && req.user.role !== "companyAdmin")
     return res.status(403).json({ error: "Brak uprawnień" });
     
-  const users = await fileStore.readJSON(usersPath, []);
-  const user = users.find((u) => u.id === req.params.id);
-  if (!user)
-    return res.status(404).json({ error: "Nie znaleziono użytkownika" });
-  if (req.user.role === "companyAdmin" && user.companyId !== req.user.companyId)
-    return res.status(403).json({ error: "Brak uprawnień" });
-    
-  await fileStore.updateJSON(usersPath, (currentUsers) => {
-    return currentUsers.filter((u) => u.id !== req.params.id);
+  const targetCompanyId = req.user.role === "companyAdmin" ? req.user.companyId : req.query.companyId;
+  if (!targetCompanyId) return res.status(400).json({ error: "Brak ID firmy" });
+
+  await fileStore.updateJSON(usersPath, (users) => {
+    let user = users.find((u) => u.id === req.params.id);
+    if (user && user.companies) {
+      user.companies = user.companies.filter(c => c.companyId !== targetCompanyId);
+    }
+    return users.filter(u => u.companies && u.companies.length > 0);
   });
   
   res.json({ success: true });

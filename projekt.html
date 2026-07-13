@@ -185,6 +185,51 @@
             const res = await fetch('/api/me');
             if (!res.ok) return;
             const me = await res.json();
+            // [COMPANY-SWITCH-INJECT]
+            if (me.availableCompanies && me.availableCompanies.length > 1) {
+                if (!window.switchCompany) {
+                    window.switchCompany = async function(companyId) {
+                        await fetch('/api/switch-company', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': (typeof csrfToken !== 'undefined' ? csrfToken : '') },
+                            body: JSON.stringify({ companyId })
+                        });
+                        window.location.reload();
+                    };
+                }
+                if (!document.getElementById('comp-switch-style')) {
+                    const style = document.createElement('style');
+                    style.id = 'comp-switch-style';
+                    style.textContent = `
+                        .company-switch-select {
+                            background: rgba(255,255,255,0.06);
+                            border: 1px solid rgba(255,255,255,0.15);
+                            color: #f1f5f9;
+                            border-radius: 8px;
+                            padding: 6px 12px;
+                            font-size: 13px;
+                            font-family: inherit;
+                            outline: none;
+                            margin-right: 12px;
+                            cursor: pointer;
+                        }
+                        .company-switch-select option { background: #1e293b; color: white; }
+                    `;
+                    document.head.appendChild(style);
+                }
+                const selectHtml = `<select onchange="window.switchCompany(this.value)" class="company-switch-select">` + 
+                    me.availableCompanies.map(c => `<option value="${c.companyId}" ${c.companyId === me.companyId ? 'selected' : ''}>${c.companyName}</option>`).join('') +
+                `</select>`;
+                
+                const headerUser = document.querySelector('.header-user');
+                if (headerUser && !document.querySelector('.company-switch-select')) {
+                    const avatar = document.getElementById('user-avatar');
+                    if (avatar) avatar.insertAdjacentHTML('beforebegin', selectHtml);
+                    else headerUser.insertAdjacentHTML('afterbegin', selectHtml);
+                }
+            }
+            // [/COMPANY-SWITCH-INJECT]
+
             document.getElementById('user-avatar').textContent = (me.name || me.email || '?')[0].toUpperCase();
             const nav = document.getElementById('header-nav');
             const tiles = [
@@ -204,7 +249,7 @@
                 if (me.role === 'companyAdmin') return true;
                 if (t.id === 'company') return me.role === 'superadmin';
                 if (me.role === 'superadmin') return true;
-                return (me.permissions || []).includes(t.perm);
+                return (me.permissions && me.permissions[t.perm] && me.permissions[t.perm] !== 'none');
             }).map(t => {
                 const companyHasApp = (me.role === 'superadmin') || companyApps.includes(t.perm);
                 if (!companyHasApp && me.role !== 'superadmin') {
